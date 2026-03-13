@@ -81,10 +81,9 @@ public class DayRewardEditGUI implements Listener {
             return;
         }
 
-        // 2) Cancel clicks on bottom inventory (player inventory)
+        // 2) Allow clicks on bottom inventory (player inventory) for item movement
         if (!event.getClickedInventory().equals(event.getView().getTopInventory())) {
-            event.setCancelled(true);
-            return;
+            return; // Don't cancel - allow player inventory interaction
         }
 
         int slot = event.getSlot();
@@ -102,7 +101,7 @@ public class DayRewardEditGUI implements Listener {
             adminCalendarGUI.open(player);
             return;
         } else if (slot >= 0 && slot <= 44) {
-            // Editable slots - allow editing (don't cancel)
+            // Editable slots - allow item movement (don't cancel)
             return;
         } else if (slot >= 47 && slot <= 53) {
             // Empty slots - cancel interaction
@@ -110,7 +109,7 @@ public class DayRewardEditGUI implements Listener {
             return;
         }
 
-        // Cancel all other clicks
+        // For all other slots, cancel the event
         event.setCancelled(true);
     }
 

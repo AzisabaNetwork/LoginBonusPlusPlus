@@ -45,11 +45,13 @@ public class CalendarClickListener implements Listener {
 
         if (event.getClickedInventory() == null) return;
 
+        event.setCancelled(true);
+
         if (!event.getClickedInventory().equals(event.getView().getTopInventory())) {
             return;
         }
 
-        event.setCancelled(true);
+        //event.setCancelled(true);
 
         Player player = (Player) event.getWhoClicked();
 

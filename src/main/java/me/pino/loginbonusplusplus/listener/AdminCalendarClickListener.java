@@ -33,16 +33,17 @@ public class AdminCalendarClickListener implements Listener {
 
         // Add null check for clicked inventory
         if (event.getClickedInventory() == null) {
+            //event.setCancelled(true);
             return;
         }
+
+        // Cancel all clicks (both top and bottom inventory)
+        event.setCancelled(true);
 
         // Check if clicked inventory is the top inventory (our GUI)
         if (!event.getClickedInventory().equals(event.getView().getTopInventory())) {
             return;
         }
-
-        // Prevent item movement
-        event.setCancelled(true);
 
         int slot = event.getSlot();
         Player player = (Player) event.getWhoClicked();
