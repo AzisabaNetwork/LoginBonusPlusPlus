@@ -52,7 +52,7 @@ public class LoginBonusPlusPlus extends JavaPlugin {
                 new CalendarGUI(this, playerDataManager, rewardManager);
 
         AdminCalendarGUI adminCalendarGUI =
-                new AdminCalendarGUI(this);
+                new AdminCalendarGUI(this, rewardManager);
 
         DayRewardEditGUI dayRewardEditGUI =
                 new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
@@ -102,5 +102,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
         reloadConfig();
         rewardManager.reload();
         messageManager.reload();
+    }
+
+    public PlayerDataManager getPlayerDataManager() {
+        return playerDataManager;
     }
 }

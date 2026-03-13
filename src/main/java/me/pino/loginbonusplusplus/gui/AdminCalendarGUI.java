@@ -1,6 +1,8 @@
 package me.pino.loginbonusplusplus.gui;
 
+import me.pino.loginbonusplusplus.manager.RewardManager;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -15,9 +17,11 @@ import java.util.List;
 public class AdminCalendarGUI {
 
     private final JavaPlugin plugin;
+    private final RewardManager rewardManager;
 
-    public AdminCalendarGUI(JavaPlugin plugin) {
+    public AdminCalendarGUI(JavaPlugin plugin, RewardManager rewardManager) {
         this.plugin = plugin;
+        this.rewardManager = rewardManager;
     }
 
     public void open(Player player) {
@@ -31,6 +35,7 @@ public class AdminCalendarGUI {
 
             if (meta != null) {
                 meta.setDisplayName("§eEdit Day " + day);
+                meta.setLore(buildRewardLore(day));
                 item.setItemMeta(meta);
             }
 
@@ -64,5 +69,39 @@ public class AdminCalendarGUI {
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             }
         }
+    }
+
+    private List<String> buildRewardLore(int day) {
+        List<String> lore = new ArrayList<>();
+        
+        // Get all rewards for this day
+        List<ItemStack> allRewards = new ArrayList<>();
+        allRewards.addAll(rewardManager.getBaseRewardItems(day));
+        allRewards.addAll(rewardManager.getSpecialRewards(day));
+        
+        if (allRewards.isEmpty()) {
+            lore.add("§7No rewards set");
+        } else {
+            lore.add("§7Rewards:");
+            
+            for (ItemStack item : allRewards) {
+                String itemName;
+                
+                // Get display name or material name
+                if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+                    itemName = item.getItemMeta().getDisplayName();
+                } else {
+                    itemName = item.getType().name();
+                }
+                
+                // Convert color codes
+                itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+                
+                // Format: §f<item name> §7x<amount>
+                lore.add("§f" + itemName + " §7x" + item.getAmount());
+            }
+        }
+        
+        return lore;
     }
 }

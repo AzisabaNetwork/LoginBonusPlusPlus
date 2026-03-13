@@ -5,9 +5,12 @@ import me.pino.loginbonusplusplus.manager.RewardManager;
 import me.pino.loginbonusplusplus.model.PlayerData;
 import me.pino.loginbonusplusplus.util.DateUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -53,10 +56,10 @@ public class CalendarGUI {
                 item = dayIcon.clone();
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    // Preserve existing lore if any, add status
-                    List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
-
-                    // Add claim status to lore
+                    // Add reward lore first
+                    List<String> lore = buildRewardLore(day);
+                    
+                    // Add claim status
                     if (data.hasClaimed(day)) {
                         lore.add("§aClaimed");
                     } else if (day == unlockDay) {
@@ -67,13 +70,21 @@ public class CalendarGUI {
                         lore.add("§8Locked");
                     }
 
+                    // Apply enchantment glow for today's claimable reward
+                    if (canClaimToday(day, unlockDay, data)) {
+                        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }
+
                     meta.setLore(lore);
                     item.setItemMeta(meta);
                 }
             } else {
                 // Use traditional colored glass
                 Material material;
-                List<String> lore = new ArrayList<>();
+                
+                // Start with reward lore
+                List<String> lore = buildRewardLore(day);
 
                 // Determine material based on claim status
                 if (data.hasClaimed(day)) {
@@ -96,6 +107,13 @@ public class CalendarGUI {
                 if (meta != null) {
                     meta.setDisplayName("§eDay " + day);
                     meta.setLore(lore);
+                    
+                    // Apply enchantment glow for today's claimable reward
+                    if (canClaimToday(day, unlockDay, data)) {
+                        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    }
+                    
                     item.setItemMeta(meta);
                 }
             }
@@ -252,5 +270,49 @@ public class CalendarGUI {
         }
 
         return 0; // All milestones reached
+    }
+
+    private List<String> buildRewardLore(int day) {
+        List<String> lore = new ArrayList<>();
+        
+        // Get all rewards for this day
+        List<ItemStack> allRewards = new ArrayList<>();
+        allRewards.addAll(rewardManager.getBaseRewardItems(day));
+        allRewards.addAll(rewardManager.getSpecialRewards(day));
+        
+        if (allRewards.isEmpty()) {
+            lore.add("§7No rewards set");
+        } else {
+            lore.add("§7Rewards:");
+            
+            for (ItemStack item : allRewards) {
+                String itemName;
+                
+                // Get display name or material name
+                if (item.hasItemMeta() && item.getItemMeta().hasDisplayName()) {
+                    itemName = item.getItemMeta().getDisplayName();
+                } else {
+                    itemName = item.getType().name();
+                }
+                
+                // Convert color codes
+                itemName = ChatColor.translateAlternateColorCodes('&', itemName);
+                
+                // Format: §f<item name> §7x<amount>
+                lore.add("§f" + itemName + " §7x" + item.getAmount());
+            }
+        }
+        
+        return lore;
+    }
+
+    private boolean canClaimToday(int day, int unlockDay, PlayerData data) {
+        int today = DateUtil.getCurrentDayOfMonth();
+        
+        // 条件：
+        // 1. 今日の日付である
+        // 2. アンロック条件を満たしている
+        // 3. まだ受取していない
+        return day == today && day == unlockDay && !data.hasClaimed(day);
     }
 }

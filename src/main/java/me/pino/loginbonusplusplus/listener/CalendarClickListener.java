@@ -65,8 +65,11 @@ public class CalendarClickListener implements Listener {
 
         int unlockDay = data.getMonthlyLoginCount();
 
-        if (day != unlockDay || data.hasClaimed(day)) {
-            return;
+//        if (day != unlockDay || data.hasClaimed(day)) {
+//            return;
+//        }
+        if (day > unlockDay || data.hasClaimed(day)) {
+            return; // 過去の未受取分も可能に
         }
 
         // ===== すべての報酬を合算 =====
