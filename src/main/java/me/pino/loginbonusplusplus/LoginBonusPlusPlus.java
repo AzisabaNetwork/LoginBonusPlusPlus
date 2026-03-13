@@ -9,7 +9,8 @@ import me.pino.loginbonusplusplus.gui.CalendarGUI;
 import me.pino.loginbonusplusplus.gui.AdminCalendarGUI;
 import me.pino.loginbonusplusplus.listener.CalendarClickListener;
 import me.pino.loginbonusplusplus.listener.AdminCalendarClickListener;
-
+import me.pino.loginbonusplusplus.manager.CalendarManager;
+import me.pino.loginbonusplusplus.manager.MessageManager;
 
 import java.io.File;
 
@@ -41,7 +42,7 @@ public class LoginBonusPlusPlus extends JavaPlugin {
         streakManager = new StreakManager();
         CalendarManager calendarManager = new CalendarManager();
         messageManager = new MessageManager(this);
-        MessageManager messageManager = new MessageManager(this);
+        //MessageManager messageManager = new MessageManager(this);
 
         playerDataManager.load();
         rewardManager.load();
@@ -51,17 +52,19 @@ public class LoginBonusPlusPlus extends JavaPlugin {
                 new CalendarGUI(this, playerDataManager, rewardManager);
 
         AdminCalendarGUI adminCalendarGUI =
-                new AdminCalendarGUI();
+                new AdminCalendarGUI(this);
 
         DayRewardEditGUI dayRewardEditGUI =
-                new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager);
+                new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
 
         // ===== Commands =====
         LoginBonusCommand command =
-                new LoginBonusCommand(calendarGUI, adminCalendarGUI);
+                new LoginBonusCommand(calendarGUI, adminCalendarGUI, this);
 
         getCommand("lb").setExecutor(command);
         getCommand("lb").setTabCompleter(command);
+
+
 
         // ===== Listeners =====
         getServer().getPluginManager().registerEvents(
@@ -93,5 +96,11 @@ public class LoginBonusPlusPlus extends JavaPlugin {
             playerDataManager.saveAll();
         }
         getLogger().info("LoginBonusPlusPlus has been disabled!");
+    }
+
+    public void reloadPlugin() {
+        reloadConfig();
+        rewardManager.reload();
+        messageManager.reload();
     }
 }

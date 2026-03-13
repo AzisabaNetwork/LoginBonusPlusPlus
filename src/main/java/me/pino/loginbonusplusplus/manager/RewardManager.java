@@ -82,6 +82,10 @@ public class RewardManager {
         }
     }
 
+    public void reload() {
+        load();
+    }
+
     public List<ItemStack> getStreakRewards(int streak) {
         List<ItemStack> items = new ArrayList<>();
 

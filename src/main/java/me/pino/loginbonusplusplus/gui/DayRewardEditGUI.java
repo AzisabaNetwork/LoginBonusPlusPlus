@@ -4,6 +4,7 @@ import me.pino.loginbonusplusplus.manager.MessageManager;
 import me.pino.loginbonusplusplus.manager.RewardManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,6 +14,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,11 +24,21 @@ public class DayRewardEditGUI implements Listener {
     private final RewardManager rewardManager;
     private final AdminCalendarGUI adminCalendarGUI;
     private final MessageManager messageManager;
+    private final JavaPlugin plugin;
 
     public DayRewardEditGUI(RewardManager rewardManager, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager) {
         this.rewardManager = rewardManager;
         this.adminCalendarGUI = adminCalendarGUI;
         this.messageManager = messageManager;
+        // Plugin reference will be set by AdminCalendarGUI
+        this.plugin = null;
+    }
+
+    public DayRewardEditGUI(RewardManager rewardManager, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager, JavaPlugin plugin) {
+        this.rewardManager = rewardManager;
+        this.adminCalendarGUI = adminCalendarGUI;
+        this.messageManager = messageManager;
+        this.plugin = plugin;
     }
 
     public void open(Player player, int day) {
@@ -43,6 +55,9 @@ public class DayRewardEditGUI implements Listener {
         addControlButtons(inventory);
 
         player.openInventory(inventory);
+        
+        // Play open sound
+        playSound(player, "ui.button.click");
     }
 
     private void addControlButtons(Inventory inventory) {
@@ -93,11 +108,13 @@ public class DayRewardEditGUI implements Listener {
         if (slot == 45) {
             // Save button
             event.setCancelled(true);
+            playSound(player, "success");
             saveAndReturn(player, title);
             return;
         } else if (slot == 46) {
             // Cancel button
             event.setCancelled(true);
+            playSound(player, "cancel");
             adminCalendarGUI.open(player);
             return;
         } else if (slot >= 0 && slot <= 44) {
@@ -164,5 +181,32 @@ public class DayRewardEditGUI implements Listener {
 
         // Return to admin calendar
         adminCalendarGUI.open(player);
+    }
+
+    private void playSound(Player player, String soundType) {
+        if (plugin == null) return;
+        
+        if (plugin.getConfig().getBoolean("sounds.enabled", true)) {
+            try {
+                String soundName;
+                switch (soundType.toLowerCase()) {
+                    case "success":
+                        soundName = plugin.getConfig().getString("sounds.success.sound", "ENTITY_PLAYER_LEVELUP");
+                        break;
+                    case "cancel":
+                        soundName = plugin.getConfig().getString("sounds.cancel.sound", "UI_BUTTON_CLICK");
+                        break;
+                    default:
+                        soundName = plugin.getConfig().getString("sounds.ui.sound", "UI_BUTTON_CLICK");
+                        break;
+                }
+                
+                Sound sound = Sound.valueOf(soundName);
+                player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+            } catch (IllegalArgumentException ignored) {
+                // Fallback to default sound
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+            }
+        }
     }
 }

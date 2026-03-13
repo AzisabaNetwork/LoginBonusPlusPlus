@@ -9,3 +9,8 @@ commands:
     description: Open login bonus GUI
     usage: /lb
     aliases: [loginbonus, lbp]
+
+permissions:
+  loginbonus.admin:
+    description: Admin permission
+    default: op

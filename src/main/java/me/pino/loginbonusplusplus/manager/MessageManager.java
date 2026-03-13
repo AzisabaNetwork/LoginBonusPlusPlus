@@ -9,11 +9,27 @@ import java.io.File;
 
 public class MessageManager {
 
-    private final FileConfiguration messagesConfig;
+    private final JavaPlugin plugin;
+    private File messagesFile;
+    private FileConfiguration messagesConfig;
 
     public MessageManager(JavaPlugin plugin) {
-        File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        this.messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+        this.plugin = plugin;
+        loadMessages();
+    }
+
+    private void loadMessages() {
+        messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+
+        if (!messagesFile.exists()) {
+            plugin.saveResource("messages.yml", false);
+        }
+
+        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+    }
+
+    public void reload() {
+        loadMessages();
     }
 
     public String get(String path) {

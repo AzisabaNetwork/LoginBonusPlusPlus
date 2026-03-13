@@ -2,6 +2,7 @@ package me.pino.loginbonusplusplus.command;
 
 import me.pino.loginbonusplusplus.gui.AdminCalendarGUI;
 import me.pino.loginbonusplusplus.gui.CalendarGUI;
+import me.pino.loginbonusplusplus.LoginBonusPlusPlus;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -9,15 +10,16 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
     private final CalendarGUI calendarGUI;
     private final AdminCalendarGUI adminCalendarGUI;
+    private final LoginBonusPlusPlus plugin;
 
-    public LoginBonusCommand(CalendarGUI calendarGUI, AdminCalendarGUI adminCalendarGUI) {
+    public LoginBonusCommand(CalendarGUI calendarGUI, AdminCalendarGUI adminCalendarGUI, LoginBonusPlusPlus plugin) {
+        this.plugin = plugin;
         this.calendarGUI = calendarGUI;
         this.adminCalendarGUI = adminCalendarGUI;
     }
@@ -42,6 +44,21 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
+        // =========================
+        // /lb reload
+        // =========================
+        if (args.length >= 1 && args[0].equalsIgnoreCase("reload")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            plugin.reloadPlugin();
+            player.sendMessage("§aLoginBonusPlusPlus reloaded!");
+            return true;
+        }
+
         // Handle /lb (no args) - open player calendar
         calendarGUI.open(player);
         return true;
@@ -58,6 +75,9 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 String input = args[0].toLowerCase();
                 if ("admin".startsWith(input)) {
                     completions.add("admin");
+                }
+                if ("reload".startsWith(input)) {
+                    completions.add("reload");
                 }
             }
         }

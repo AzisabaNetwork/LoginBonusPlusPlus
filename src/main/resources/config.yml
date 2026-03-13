@@ -41,8 +41,25 @@ database:
 sendClickableReminder: true
 
 sounds:
+  enabled: true
+
   claim:
     enabled: true
-    type: ENTITY_PLAYER_LEVELUP
+    sound: ENTITY_PLAYER_LEVELUP
     volume: 1.0
     pitch: 1.0
+
+  ui:
+    sound: UI_BUTTON_CLICK
+    volume: 1.0
+    pitch: 1.0
+
+  success:
+    sound: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.2
+
+  cancel:
+    sound: UI_BUTTON_CLICK
+    volume: 0.8
+    pitch: 0.8

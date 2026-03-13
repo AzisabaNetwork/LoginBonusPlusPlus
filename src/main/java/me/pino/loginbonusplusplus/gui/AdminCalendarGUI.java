@@ -2,15 +2,23 @@ package me.pino.loginbonusplusplus.gui;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AdminCalendarGUI {
+
+    private final JavaPlugin plugin;
+
+    public AdminCalendarGUI(JavaPlugin plugin) {
+        this.plugin = plugin;
+    }
 
     public void open(Player player) {
         // Create 54-slot inventory
@@ -41,5 +49,20 @@ public class AdminCalendarGUI {
 
         // Open inventory for player
         player.openInventory(inventory);
+        
+        // Play open sound
+        playSound(player, "ui.button.click");
+    }
+
+    private void playSound(Player player, String soundName) {
+        if (plugin.getConfig().getBoolean("sounds.enabled", true)) {
+            try {
+                Sound sound = Sound.valueOf(plugin.getConfig().getString("sounds.ui.sound", "UI_BUTTON_CLICK"));
+                player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+            } catch (IllegalArgumentException ignored) {
+                // Fallback to default sound
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+            }
+        }
     }
 }
