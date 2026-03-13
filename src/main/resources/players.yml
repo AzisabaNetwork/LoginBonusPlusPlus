@@ -1,0 +1,24 @@
+# LoginBonusPlusPlus Player Data
+# This file stores player login data and bonus information
+
+# Example player data structure
+# players:
+#   UUID:
+#     username: PlayerName
+#     last-login: 2023-01-01 12:00:00
+#     consecutive-days: 5
+#     total-logins: 10
+#     claimed-rewards:
+#       - 1
+#       - 2
+#       - 3
+#       - 7
+#     first-login: false
+
+players: {}
+
+# Statistics
+statistics:
+  total-players: 0
+  total-rewards-claimed: 0
+  last-reset: 2023-01-01 00:00:00

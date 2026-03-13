@@ -1,0 +1,76 @@
+# LoginBonusPlusPlus Rewards Configuration
+
+# Daily rewards configuration
+daily-rewards:
+  # Day 1 reward
+  1:
+    type: item
+    item: DIAMOND
+    amount: 1
+    display-name: "&6Daily Diamond Bonus"
+
+  # Day 2 reward
+  2:
+    type: item
+    item: EMERALD
+    amount: 2
+    display-name: "&aDaily Emerald Bonus"
+
+  # Day 3 reward
+  3:
+    type: item
+    item: GOLD_INGOT
+    amount: 5
+    display-name: "&eDaily Gold Bonus"
+
+  # Day 4 reward
+  4:
+    type: item
+    item: IRON_INGOT
+    amount: 10
+    display-name: "&7Daily Iron Bonus"
+
+  # Day 5 reward
+  5:
+    type: item
+    item: EXPERIENCE_BOTTLE
+    amount: 3
+    display-name: "&bDaily Experience Bonus"
+
+# Consecutive day bonuses
+consecutive-bonuses:
+  # 7 days consecutive
+  7:
+    type: item
+    item: NETHER_STAR
+    amount: 1
+    display-name: "&57 Day Consecutive Bonus!"
+
+  # 14 days consecutive
+  14:
+    type: item
+    item: DRAGON_EGG
+    amount: 1
+    display-name: "&614 Day Consecutive Bonus!"
+
+  # 30 days consecutive
+  30:
+    type: item
+    item: TOTEM_OF_UNDYING
+    amount: 1
+    display-name: "&c30 Day Consecutive Bonus!"
+
+# Special rewards
+special-rewards:
+  # First login reward
+  first-login:
+    type: item
+    item: DIAMOND_SWORD
+    amount: 1
+    display-name: "&6Welcome Bonus!"
+
+  # Monthly reward
+  monthly:
+    type: command
+    command: "give %player% DIAMOND_BLOCK 5"
+    display-name: "&6Monthly Bonus!"

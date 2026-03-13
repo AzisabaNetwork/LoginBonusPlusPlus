@@ -1,0 +1,11 @@
+name: LoginBonusPlusPlus
+main: me.pino.loginbonusplusplus.LoginBonusPlusPlus
+version: ${version}
+api-version: 1.16
+author: pino223
+
+commands:
+  lb:
+    description: Open login bonus GUI
+    usage: /lb
+    aliases: [loginbonus, lbp]

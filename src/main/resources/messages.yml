@@ -1,0 +1,50 @@
+# LoginBonusPlusPlus Messages Configuration
+
+# General messages
+general:
+  prefix: "&6[LoginBonus] &r"
+  no-permission: "&cYou don't have permission to use this command."
+  player-only: "&cThis command can only be used by players."
+  config-reloaded: "&aConfiguration has been reloaded."
+
+# Login messages
+login:
+  welcome-back: "&aWelcome back, %player%!"
+  first-login: "&6Welcome to the server, %player%! Enjoy your first login bonus!"
+  bonus-available: "&aYou have a daily bonus available! Use /loginbonus to claim it."
+  no-bonus: "&cYou have already claimed your daily bonus. Come back tomorrow!"
+  consecutive-days: "&6You are on a %days% day streak! Keep it up!"
+
+# Command messages
+commands:
+  usage: "&cUsage: /loginbonus [claim|streak|help]"
+  claim-success: "&aYou have successfully claimed your daily bonus!"
+  claim-failed: "&cFailed to claim your bonus. Please try again later."
+  streak-info: "&6Current streak: %days% days"
+  no-streak: "&cYou don't have an active streak yet."
+  help-header: "&6=== LoginBonus Commands ==="
+  help-claim: "&a/loginbonus claim &7- Claim your daily bonus"
+  help-streak: "&a/loginbonus streak &7- Check your current streak"
+  help-reload: "&a/loginbonus reload &7- Reload configuration (Admin only)"
+  help-help: "&a/loginbonus help &7- Show this help message"
+
+# Reward messages
+rewards:
+  received: "&aYou received: %reward%"
+  consecutive-received: "&6Consecutive bonus received: %reward%"
+  special-received: "&eSpecial bonus received: %reward%"
+
+# Error messages
+errors:
+  player-not-found: "&cPlayer not found: %player%"
+  invalid-config: "&cConfiguration error. Please check your config files."
+  database-error: "&cDatabase error occurred. Please contact an administrator."
+  unknown-error: "&cAn unknown error occurred. Please try again later."
+
+# GUI messages (for future implementation)
+gui:
+  title: "&6Daily Bonus"
+  claimed: "&aAlready Claimed"
+  available: "&eAvailable"
+  locked: "&cLocked"
+  close: "&cClose"

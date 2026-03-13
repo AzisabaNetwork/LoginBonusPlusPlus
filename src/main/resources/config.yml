@@ -1,0 +1,48 @@
+# LoginBonusPlusPlus Configuration File
+
+# Plugin settings
+settings:
+  # Enable debug mode
+  debug: false
+
+  # Check for updates
+  check-updates: true
+
+  # Language file to use
+  language: messages.yml
+
+# Login bonus settings
+bonus:
+  # Enable daily login bonus
+  enabled: true
+
+  # Reset time for daily bonus (24-hour format)
+  reset-time: "00:00"
+
+  # Allow consecutive day bonuses
+  consecutive-bonus: true
+
+  # Maximum consecutive days before reset
+  max-consecutive-days: 30
+
+# Database settings
+database:
+  # Storage type: file, mysql, sqlite
+  type: file
+
+  # MySQL settings (only used if type is mysql)
+  mysql:
+    host: localhost
+    port: 3306
+    database: loginbonus
+    username: root
+    password: password
+
+sendClickableReminder: true
+
+sounds:
+  claim:
+    enabled: true
+    type: ENTITY_PLAYER_LEVELUP
+    volume: 1.0
+    pitch: 1.0
