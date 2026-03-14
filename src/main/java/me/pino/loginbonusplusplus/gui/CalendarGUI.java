@@ -164,7 +164,7 @@ public class CalendarGUI {
         if (todayMeta != null) {
             todayMeta.setDisplayName("§eToday");
             List<String> todayLore = new ArrayList<>();
-            todayLore.add("§7Day: " + DateUtil.getCurrentDayOfMonth());
+            todayLore.add("§7Date: " + DateUtil.getCurrentMonth() + "/" + DateUtil.getCurrentDayOfMonth());
             todayMeta.setLore(todayLore);
             todayItem.setItemMeta(todayMeta);
         }
@@ -203,14 +203,33 @@ public class CalendarGUI {
         ItemStack daysUntilItem = new ItemStack(Material.PAPER);
         ItemMeta daysUntilMeta = daysUntilItem.getItemMeta();
         if (daysUntilMeta != null) {
-            daysUntilMeta.setDisplayName("§eNext Bonus");
+            daysUntilMeta.setDisplayName("§eNext Streak Bonus");
             List<String> daysUntilLore = new ArrayList<>();
-            int daysUntil = getDaysUntilNextStreak(streak);
-            if (daysUntil > 0) {
+            
+            // Get next streak reward info
+            int[] nextStreakInfo = getNextStreakReward(streak);
+            int nextStreak = nextStreakInfo[0];
+            int daysUntil = nextStreakInfo[1];
+            
+            if (nextStreak > 0) {
+                daysUntilLore.add("§7Next: " + nextStreak + " day streak");
                 daysUntilLore.add("§7In: " + daysUntil + " days");
+                
+                // Show reward items
+                List<ItemStack> nextRewards = rewardManager.getStreakRewards(nextStreak);
+                if (!nextRewards.isEmpty()) {
+                    daysUntilLore.add("§7Rewards:");
+                    for (ItemStack reward : nextRewards) {
+                        String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
+                            ? reward.getItemMeta().getDisplayName() 
+                            : reward.getType().name();
+                        daysUntilLore.add("§f- " + name + " §7x" + reward.getAmount());
+                    }
+                }
             } else {
-                daysUntilLore.add("§7Available now!");
+                daysUntilLore.add("§7No more streak rewards");
             }
+            
             daysUntilMeta.setLore(daysUntilLore);
             daysUntilItem.setItemMeta(daysUntilMeta);
         }
@@ -342,5 +361,32 @@ public class CalendarGUI {
         // 2. アンロック条件を満たしている
         // 3. まだ受取していない
         return day <= unlockDay && day == today && !data.hasClaimed(day);
+    }
+
+    private int[] getNextStreakReward(int currentStreak) {
+        // Get all streak rewards from config
+        List<Integer> streaks = new ArrayList<>();
+        
+        if (rewardManager.getConfig().contains("streak")) {
+            for (String key : rewardManager.getConfig().getConfigurationSection("streak").getKeys(false)) {
+                try {
+                    int streak = Integer.parseInt(key);
+                    if (streak > currentStreak) {
+                        streaks.add(streak);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        if (streaks.isEmpty()) {
+            return new int[]{0, 0}; // No more rewards
+        }
+        
+        // Sort and find the next streak
+        streaks.sort(Integer::compareTo);
+        int nextStreak = streaks.get(0);
+        int daysUntil = nextStreak - currentStreak;
+        
+        return new int[]{nextStreak, daysUntil};
     }
 }

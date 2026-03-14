@@ -2,6 +2,7 @@ package me.pino.loginbonusplusplus.listener;
 
 import me.pino.loginbonusplusplus.gui.AdminCalendarGUI;
 import me.pino.loginbonusplusplus.gui.DayRewardEditGUI;
+import me.pino.loginbonusplusplus.gui.StreakRewardEditGUI;
 import me.pino.loginbonusplusplus.manager.MessageManager;
 import me.pino.loginbonusplusplus.manager.RewardManager;
 import org.bukkit.entity.Player;
@@ -14,12 +15,14 @@ public class AdminCalendarClickListener implements Listener {
 
     private final RewardManager rewardManager;
     private final DayRewardEditGUI dayRewardEditGUI;
+    private final StreakRewardEditGUI streakRewardEditGUI;
     private final AdminCalendarGUI adminCalendarGUI;
     private final MessageManager messageManager;
 
-    public AdminCalendarClickListener(RewardManager rewardManager, DayRewardEditGUI dayRewardEditGUI, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager) {
+    public AdminCalendarClickListener(RewardManager rewardManager, DayRewardEditGUI dayRewardEditGUI, StreakRewardEditGUI streakRewardEditGUI, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager) {
         this.rewardManager = rewardManager;
         this.dayRewardEditGUI = dayRewardEditGUI;
+        this.streakRewardEditGUI = streakRewardEditGUI;
         this.adminCalendarGUI = adminCalendarGUI;
         this.messageManager = messageManager;
     }
@@ -53,9 +56,8 @@ public class AdminCalendarClickListener implements Listener {
 
         // Handle streak rewards edit button (slot 45)
         if (slot == 45) {
-            // TODO: Open StreakRewardEditGUI when created
-            player.sendMessage("§eStreak rewards editor coming soon!");
-
+            // Open StreakRewardEditGUI
+            streakRewardEditGUI.open(player);
             return;
         }
 

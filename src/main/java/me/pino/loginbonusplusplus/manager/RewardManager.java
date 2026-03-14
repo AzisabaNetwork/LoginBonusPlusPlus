@@ -107,6 +107,27 @@ public class RewardManager {
         return items;
     }
 
+    public void saveStreakRewards(int streak, List<ItemStack> rewards) {
+        String path = "streak." + streak;
+        
+        if (rewards.isEmpty()) {
+            config.set(path, null);
+        } else {
+            List<String> base64Strings = new ArrayList<>();
+            for (ItemStack item : rewards) {
+                try {
+                    String base64 = ItemStackSerializer.itemToBase64(item);
+                    base64Strings.add(base64);
+                } catch (Exception e) {
+                    plugin.getLogger().warning("Failed to serialize streak reward: " + e.getMessage());
+                }
+            }
+            config.set(path, base64Strings);
+        }
+        
+        saveConfig();
+    }
+
     public List<ItemStack> getSpecialRewards(int day) {
         List<ItemStack> items = new ArrayList<>();
 
@@ -178,5 +199,9 @@ public class RewardManager {
         }
 
         return null;
+    }
+
+    public org.bukkit.configuration.file.FileConfiguration getConfig() {
+        return config;
     }
 }

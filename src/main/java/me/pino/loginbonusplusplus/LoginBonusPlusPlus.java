@@ -22,6 +22,7 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     private CalendarGUI calendarGUI;
     private AdminCalendarGUI adminCalendarGUI;
     private DayRewardEditGUI dayRewardEditGUI;
+    private StreakRewardEditGUI streakRewardEditGUI;
     private MessageManager messageManager;
 
     @Override
@@ -54,6 +55,7 @@ public class LoginBonusPlusPlus extends JavaPlugin {
         calendarGUI = new CalendarGUI(this, playerDataManager, rewardManager);
         adminCalendarGUI = new AdminCalendarGUI(this, rewardManager);
         dayRewardEditGUI = new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
+        streakRewardEditGUI = new StreakRewardEditGUI(this, rewardManager);
 
         // ===== Commands =====
         LoginBonusCommand command =
@@ -76,12 +78,17 @@ public class LoginBonusPlusPlus extends JavaPlugin {
         );
 
         getServer().getPluginManager().registerEvents(
-                new AdminCalendarClickListener(rewardManager, dayRewardEditGUI, adminCalendarGUI, messageManager),
+                new AdminCalendarClickListener(rewardManager, dayRewardEditGUI, streakRewardEditGUI, adminCalendarGUI, messageManager),
                 this
         );
 
         getServer().getPluginManager().registerEvents(
                 dayRewardEditGUI,
+                this
+        );
+
+        getServer().getPluginManager().registerEvents(
+                streakRewardEditGUI,
                 this
         );
 
@@ -108,5 +115,13 @@ public class LoginBonusPlusPlus extends JavaPlugin {
 
     public CalendarGUI getCalendarGUI() {
         return calendarGUI;
+    }
+
+    public AdminCalendarGUI getAdminCalendarGUI() {
+        return adminCalendarGUI;
+    }
+
+    public StreakRewardEditGUI getStreakRewardEditGUI() {
+        return streakRewardEditGUI;
     }
 }

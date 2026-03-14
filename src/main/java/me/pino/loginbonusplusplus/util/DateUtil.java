@@ -16,6 +16,10 @@ public class DateUtil {
         return LocalDate.now().getDayOfMonth();
     }
 
+    public static int getCurrentMonth() {
+        return LocalDate.now().getMonthValue();
+    }
+
     public static int getCurrentMonthLength() {
         return LocalDate.now().lengthOfMonth();
     }
