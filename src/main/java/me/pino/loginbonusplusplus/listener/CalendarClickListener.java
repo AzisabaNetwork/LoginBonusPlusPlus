@@ -1,5 +1,6 @@
 package me.pino.loginbonusplusplus.listener;
 
+import me.pino.loginbonusplusplus.gui.CalendarGUI;
 import me.pino.loginbonusplusplus.manager.MessageManager;
 import me.pino.loginbonusplusplus.manager.PlayerDataManager;
 import me.pino.loginbonusplusplus.manager.RewardManager;
@@ -12,6 +13,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.Bukkit;
+import me.pino.loginbonusplusplus.LoginBonusPlusPlus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -105,8 +108,18 @@ public class CalendarClickListener implements Listener {
 
         data.addClaimedDay(day);
         playerDataManager.savePlayer(data);
-
-        player.sendMessage(messageManager.get("claimed"));
+        player.sendMessage("§eClaimed!");
+        player.closeInventory();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            try {
+                // LoginBonusPlusPlusからCalendarGUIを取得
+                LoginBonusPlusPlus pluginInstance = (LoginBonusPlusPlus) plugin;
+                CalendarGUI calendarGUI = pluginInstance.getCalendarGUI();
+                calendarGUI.open(player);
+            } catch (Exception e) {
+                player.sendMessage("§cError reopening calendar. Please open it manually.");
+            }
+        }, 2L);
 
         // ===== サウンド =====
         if (plugin.getConfig().getBoolean("sounds.claim.enabled", false)) {
