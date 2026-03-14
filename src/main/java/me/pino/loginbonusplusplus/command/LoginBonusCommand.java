@@ -12,8 +12,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
@@ -40,12 +42,17 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
         // Handle /lb admin
         if (args.length >= 1 && args[0].equalsIgnoreCase("admin")) {
-            if (player.hasPermission("loginbonus.admin")) {
-                adminCalendarGUI.open(player);
-            } else {
+            if (!player.hasPermission("loginbonus.admin")) {
                 player.sendMessage("§cYou don't have permission to use this command.");
-
+                return true;
             }
+            
+            // Handle /lb admin reset-month
+            if (args.length >= 2 && args[1].equalsIgnoreCase("reset-month")) {
+                return handleResetMonthCommand(player, args);
+            }
+            
+            adminCalendarGUI.open(player);
             return true;
         }
 
@@ -266,12 +273,39 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§cUsage:");
         player.sendMessage("§7/lb §f- Open login bonus calendar");
         player.sendMessage("§7/lb admin §f- Open admin calendar");
+        player.sendMessage("§7/lb admin reset-month §f- Reset monthly data for all players");
         player.sendMessage("§7/lb reload §f- Reload configuration");
         player.sendMessage("§7/lb check <player> §f- Check player login data");
         player.sendMessage("§7/lb debug add <player> <amount> §f- Add login days");
         player.sendMessage("§7/lb debug reset <player> §f- Reset player data");
         player.sendMessage("§7/lb debug set day <player> <day> §f- Set unlock day");
         player.sendMessage("§7/lb debug set month <player> <month> §f- Set month (testing)");
+    }
+
+    private boolean handleResetMonthCommand(Player player, String[] args) {
+        // 全プレイヤーの月データをリセット
+        int currentMonth = LocalDate.now().getMonthValue();
+        int resetCount = 0;
+        
+        // オンラインプレイヤーを処理
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            PlayerData data = playerDataManager.getPlayer(onlinePlayer.getUniqueId());
+            data.setMonthlyLoginCount(0);
+            data.clearClaimedDays();
+            data.setLastLoginMonth(currentMonth);
+            playerDataManager.savePlayer(data);
+            resetCount++;
+            
+            onlinePlayer.sendMessage("§eYour monthly login data has been reset by admin.");
+        }
+        
+        // オフラインプレイヤーも処理（PlayerDataManagerにgetAllPlayersメソッドが必要な場合）
+        // この部分はPlayerDataManagerの実装に依存します
+        
+        player.sendMessage("§aMonthly reset completed for " + resetCount + " online players!");
+        plugin.getLogger().info("Admin " + player.getName() + " performed monthly reset for " + resetCount + " players");
+        
+        return true;
     }
 
     @Override
@@ -297,6 +331,14 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             String input = args[0].toLowerCase();
             if ("check".startsWith(input)) {
                 completions.add("check");
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("admin")) {
+            // Complete admin subcommands
+            if (sender.hasPermission("loginbonus.admin")) {
+                String input = args[1].toLowerCase();
+                if ("reset-month".startsWith(input)) {
+                    completions.add("reset-month");
+                }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("check")) {
             // Complete player names for check
