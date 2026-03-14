@@ -130,19 +130,46 @@ public class RewardManager {
 
     public ItemStack getDayIcon(int day) {
 
-        String materialPath = "base." + day + ".icon-material";
-
-        if (config.contains(materialPath)) {
+        // カスタムモデルデータ付きアイコン
+        String iconPath = "base." + day + ".icon";
+        if (config.contains(iconPath)) {
             try {
-                return new ItemStack(Material.valueOf(
-                        config.getString(materialPath)
-                ));
+                // Base64シリアライズされたItemStackを優先
+                List<String> iconList = config.getStringList(iconPath);
+                if (!iconList.isEmpty()) {
+                    String base64Data = iconList.get(0);
+                    if (base64Data.startsWith("rO0AB")) {
+                        return ItemStackSerializer.itemFromBase64(base64Data);
+                    }
+                }
             } catch (Exception ignored) {}
         }
 
-        // 既存Base64方式
+        // シンプルなマテリアル指定
+        String materialPath = "base." + day + ".icon-material";
+        if (config.contains(materialPath)) {
+            try {
+                Material material = Material.valueOf(config.getString(materialPath));
+                ItemStack item = new ItemStack(material);
+                
+                // カスタムモデルデータを設定
+                String customModelPath = "base." + day + ".custom-model-data";
+                if (config.contains(customModelPath)) {
+                    int customModelData = config.getInt(customModelPath);
+                    org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+                    if (meta != null) {
+                        meta.setCustomModelData(customModelData);
+                        item.setItemMeta(meta);
+                    }
+                }
+                
+                return item;
+            } catch (Exception ignored) {}
+        }
+
+        // 既存Base64方式（後方互換）
         String base64Path = "base." + day + ".icon";
-        if (config.contains(base64Path)) {
+        if (config.contains(base64Path) && config.getStringList(base64Path).isEmpty()) {
             try {
                 return ItemStackSerializer.itemFromBase64(
                         config.getString(base64Path)

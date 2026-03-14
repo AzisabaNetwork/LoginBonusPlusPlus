@@ -82,32 +82,25 @@ public class LoginListener implements Listener {
 
         if (!data.hasClaimed(unlockDay)) {
 
+            //boolean sendClickable = plugin.getConfig().getBoolean("sendClickableReminder", false);
             boolean sendClickable = plugin.getConfig().getBoolean("sendClickableReminder", false);
 
             if (sendClickable) {
+                // 日本語のクリック可能メッセージ
+                TextComponent base = new TextComponent("§e未受取の報酬があります！ ");
 
-                TextComponent base = new TextComponent(
-                        messageManager.get("reminder-prefix")
-                );
-
-                TextComponent click = new TextComponent(
-                        messageManager.get("reminder-click")
-                );
-
-                click.setClickEvent(new ClickEvent(
-                        ClickEvent.Action.RUN_COMMAND,
-                        "/lb"
-                ));
+                TextComponent click = new TextComponent("§a§n[ここをクリックしてカレンダーを開く]");
+                click.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/lb"));
 
                 base.addExtra(click);
-
                 player.spigot().sendMessage(base);
 
             } else {
-                player.sendMessage(
-                        messageManager.get("reminder-plain")
-                );
+                // 通常の日本語メッセージ
+                player.sendMessage("§e未受取の報酬があります！/lb コマンドでカレンダーを開いてください。");
             }
+
+
         }
 
         plugin.getLogger().info("Login processed for "

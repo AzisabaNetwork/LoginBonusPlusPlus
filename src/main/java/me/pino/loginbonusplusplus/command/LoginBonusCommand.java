@@ -11,6 +11,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -72,6 +74,26 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         }
 
         // =========================
+        // /lb config
+        // =========================
+        if (args.length >= 1 && args[0].equalsIgnoreCase("config")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            player.sendMessage("§6=== LoginBonusPlusPlus Config ===");
+            player.sendMessage("§eClickable Reminder: §f" + plugin.getConfig().getBoolean("sendClickableReminder", false));
+            player.sendMessage("§eDatabase Host: §f" + plugin.getConfig().getString("database.host", "localhost"));
+            player.sendMessage("§eDatabase Name: §f" + plugin.getConfig().getString("database.name", "loginbonus"));
+            player.sendMessage("§eSounds Enabled: §f" + plugin.getConfig().getBoolean("sounds.enabled", false));
+            player.sendMessage("§eClaim Sound: §f" + plugin.getConfig().getString("sounds.claim.sound", "ENTITY_PLAYER_LEVELUP"));
+            player.sendMessage("§eClaim Sound Enabled: §f" + plugin.getConfig().getBoolean("sounds.claim.enabled", false));
+            return true;
+        }
+
+        // =========================
         // /lb debug add <player> <number>
         // =========================
         if (args.length >= 4 &&
@@ -104,6 +126,12 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             data.setTotalLoginDays(data.getTotalLoginDays() + amount);
             data.setMonthlyLoginCount(data.getMonthlyLoginCount() + amount);
             data.setStreak(data.getStreak() + amount);
+            
+            // lastLoginDateを設定してmissed表示を防止
+            if (data.getLastLoginDate() == null) {
+                data.setLastLoginDate(LocalDate.now());
+            }
+            
             playerDataManager.savePlayer(data);
 
             player.sendMessage("§aAdded " + amount + " login days to " + target.getName());
@@ -221,6 +249,34 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         }
 
         // =========================
+        // /lb debug sendmessage
+        // =========================
+        if (args.length >= 2 &&
+                args[0].equalsIgnoreCase("debug") &&
+                args[1].equalsIgnoreCase("sendmessage")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            // 日本語のクリック可能メッセージを送信
+            net.md_5.bungee.api.chat.TextComponent base = new net.md_5.bungee.api.chat.TextComponent("§e未受取の報酬があります！ ");
+
+            net.md_5.bungee.api.chat.TextComponent click = new net.md_5.bungee.api.chat.TextComponent("§a§n[ここをクリックしてカレンダーを開く]");
+            click.setClickEvent(new net.md_5.bungee.api.chat.ClickEvent(
+                    net.md_5.bungee.api.chat.ClickEvent.Action.RUN_COMMAND,
+                    "/lb"
+            ));
+
+            base.addExtra(click);
+            player.spigot().sendMessage(base);
+
+            player.sendMessage("§aTest message sent!");
+            return true;
+        }
+
+        // =========================
         // /lb debug set month <player> <month>
         // =========================
         if (args.length >= 4 &&
@@ -275,6 +331,7 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§7/lb admin §f- Open admin calendar");
         player.sendMessage("§7/lb admin reset-month §f- Reset monthly data for all players");
         player.sendMessage("§7/lb reload §f- Reload configuration");
+        player.sendMessage("§7/lb config §f- Show configuration info");
         player.sendMessage("§7/lb check <player> §f- Check player login data");
         player.sendMessage("§7/lb debug add <player> <amount> §f- Add login days");
         player.sendMessage("§7/lb debug reset <player> §f- Reset player data");
@@ -322,6 +379,9 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
                 if ("reload".startsWith(input)) {
                     completions.add("reload");
+                }
+                if ("config".startsWith(input)) {
+                    completions.add("config");
                 }
                 if ("debug".startsWith(input)) {
                     completions.add("debug");
@@ -374,6 +434,9 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                         completions.add("day");
                     } else if ("month".startsWith(input)) {
                         completions.add("month");
+                    }
+                    if ("sendmessage".startsWith(input)) {
+                        completions.add("sendmessage");
                     }
                 } else {
                     // Complete player names for add and reset
