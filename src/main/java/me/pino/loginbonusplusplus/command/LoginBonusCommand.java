@@ -68,8 +68,8 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         // /lb debug add <player> <number>
         // =========================
         if (args.length >= 4 &&
-            args[0].equalsIgnoreCase("debug") &&
-            args[1].equalsIgnoreCase("add")) {
+                args[0].equalsIgnoreCase("debug") &&
+                args[1].equalsIgnoreCase("add")) {
 
             if (!player.hasPermission("loginbonus.admin")) {
                 player.sendMessage("§cYou don't have permission.");
@@ -93,7 +93,7 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             }
 
             PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
-            
+
             data.setTotalLoginDays(data.getTotalLoginDays() + amount);
             data.setMonthlyLoginCount(data.getMonthlyLoginCount() + amount);
             data.setStreak(data.getStreak() + amount);
@@ -101,7 +101,159 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
             player.sendMessage("§aAdded " + amount + " login days to " + target.getName());
             target.sendMessage("§eYour login count was increased by " + amount);
-            
+
+            return true;
+        }
+
+        // =========================
+        // /lb debug reset <player>
+        // =========================
+        if (args.length >= 3 &&
+                args[0].equalsIgnoreCase("debug") &&
+                args[1].equalsIgnoreCase("reset")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            Player target = Bukkit.getPlayerExact(args[2]);
+            if (target == null) {
+                player.sendMessage("§cPlayer not found: " + args[2]);
+                return true;
+            }
+
+            PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
+
+            // Reset all data
+            data.getClaimedDays().clear();
+            data.setStreak(0);
+            data.setTotalLoginDays(0);
+            data.setMonthlyLoginCount(0);
+            data.setLastLoginDate(null);
+            data.setLastLoginMonth(0);
+
+            playerDataManager.savePlayer(data);
+
+            player.sendMessage("§aReset login data for " + target.getName());
+            target.sendMessage("§cYour login data has been reset by an admin.");
+
+            return true;
+        }
+
+        // =========================
+        // /lb debug set day <player> <day>
+        // =========================
+        if (args.length >= 5 &&
+                args[0].equalsIgnoreCase("debug") &&
+                args[1].equalsIgnoreCase("set") &&
+                args[2].equalsIgnoreCase("day")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            Player target = Bukkit.getPlayerExact(args[3]);
+            if (target == null) {
+                player.sendMessage("§cPlayer not found: " + args[3]);
+                return true;
+            }
+
+            int day;
+            try {
+                day = Integer.parseInt(args[4]);
+            } catch (NumberFormatException e) {
+                player.sendMessage("§cInvalid number: " + args[4]);
+                return true;
+            }
+
+            if (day < 1 || day > 31) {
+                player.sendMessage("§cDay must be between 1 and 31.");
+                return true;
+            }
+
+            PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
+
+            // Set monthly login count (unlockDay depends on this)
+            data.setMonthlyLoginCount(day);
+
+            playerDataManager.savePlayer(data);
+
+            player.sendMessage("§aSet " + target.getName() + "'s unlock day to " + day);
+            target.sendMessage("§eYour unlock day was set to " + day + " by admin.");
+
+            return true;
+        }
+
+        // =========================
+        // /lb check <player>
+        // =========================
+        if (args.length >= 2 && args[0].equalsIgnoreCase("check")) {
+
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+            if (target == null) {
+                player.sendMessage("§cPlayer not found: " + args[1]);
+                return true;
+            }
+
+            PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
+
+            player.sendMessage("§6=== " + target.getName() + "'s Login Data ===");
+            player.sendMessage("§eMonthly Logins: §f" + data.getMonthlyLoginCount());
+            player.sendMessage("§eLogin Streak: §f" + data.getStreak() + " days");
+            player.sendMessage("§eTotal Login Days: §f" + data.getTotalLoginDays());
+            player.sendMessage("§eLast Login: §f" + (data.getLastLoginDate() != null ? data.getLastLoginDate() : "Never"));
+            player.sendMessage("§eClaimed Days: §f" + data.getClaimedDays().size() + " days");
+
+            return true;
+        }
+
+        // =========================
+        // /lb debug set month <player> <month>
+        // =========================
+        if (args.length >= 4 &&
+                args[0].equalsIgnoreCase("debug") &&
+                args[1].equalsIgnoreCase("set") &&
+                args[2].equalsIgnoreCase("month")) {
+
+            if (!player.hasPermission("loginbonus.admin")) {
+                player.sendMessage("§cYou don't have permission.");
+                return true;
+            }
+
+            Player target = Bukkit.getPlayerExact(args[3]);
+            if (target == null) {
+                player.sendMessage("§cPlayer not found: " + args[3]);
+                return true;
+            }
+
+            int month;
+            try {
+                month = Integer.parseInt(args[3]);
+            } catch (NumberFormatException e) {
+                player.sendMessage("§cInvalid month number: " + args[3]);
+                return true;
+            }
+
+            if (month < 1 || month > 12) {
+                player.sendMessage("§cMonth must be between 1 and 12.");
+                return true;
+            }
+
+            PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
+
+            // 強制的に月を変更（テスト用）
+            data.setLastLoginMonth(month);
+            playerDataManager.savePlayer(data);
+
+            player.sendMessage("§aSet " + target.getName() + "'s month to " + month + " (for testing)");
+            target.sendMessage("§eYour month was set to " + month + " by admin for testing.");
+
             return true;
         }
 
@@ -115,7 +267,11 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§7/lb §f- Open login bonus calendar");
         player.sendMessage("§7/lb admin §f- Open admin calendar");
         player.sendMessage("§7/lb reload §f- Reload configuration");
+        player.sendMessage("§7/lb check <player> §f- Check player login data");
         player.sendMessage("§7/lb debug add <player> <amount> §f- Add login days");
+        player.sendMessage("§7/lb debug reset <player> §f- Reset player data");
+        player.sendMessage("§7/lb debug set day <player> <day> §f- Set unlock day");
+        player.sendMessage("§7/lb debug set month <player> <month> §f- Set month (testing)");
     }
 
     @Override
@@ -137,6 +293,19 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                     completions.add("debug");
                 }
             }
+            // check command is available for everyone
+            String input = args[0].toLowerCase();
+            if ("check".startsWith(input)) {
+                completions.add("check");
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("check")) {
+            // Complete player names for check
+            String input = args[1].toLowerCase();
+            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                    completions.add(onlinePlayer.getName());
+                }
+            }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
             // Complete second argument for debug
             if (sender.hasPermission("loginbonus.admin")) {
@@ -144,19 +313,71 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 if ("add".startsWith(input)) {
                     completions.add("add");
                 }
+                if ("reset".startsWith(input)) {
+                    completions.add("reset");
+                }
+                if ("set".startsWith(input)) {
+                    completions.add("set");
+                }
+                if ("month".startsWith(input)) {
+                    completions.add("month");
+                }
             }
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("add")) {
-            // Complete player names
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("debug")) {
+            // Complete third argument for debug commands
             if (sender.hasPermission("loginbonus.admin")) {
-                String input = args[2].toLowerCase();
-                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                    if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
-                        completions.add(onlinePlayer.getName());
+                if (args[1].equalsIgnoreCase("set")) {
+                    String input = args[2].toLowerCase();
+                    if ("day".startsWith(input)) {
+                        completions.add("day");
+                    } else if ("month".startsWith(input)) {
+                        completions.add("month");
+                    }
+                } else {
+                    // Complete player names for add and reset
+                    String input = args[2].toLowerCase();
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                            completions.add(onlinePlayer.getName());
+                        }
                     }
                 }
             }
-        }
+        } else if (args.length == 4 && args[0].equalsIgnoreCase("debug")) {
+            // Complete fourth argument for debug commands
+            if (sender.hasPermission("loginbonus.admin")) {
+                if (args[1].equalsIgnoreCase("add")) {
+                    // Complete player names for add
+                    String input = args[3].toLowerCase();
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                            completions.add(onlinePlayer.getName());
+                        }
+                    }
+                } else if (args[1].equalsIgnoreCase("set") && (args[2].equalsIgnoreCase("day") || args[2].equalsIgnoreCase("month"))) {
+                    // Complete player names for set day/month
+                    String input = args[3].toLowerCase();
+                    for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                        if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                            completions.add(onlinePlayer.getName());
+                        }
+                    }
+                }
+            }
+        } else if (args.length == 5 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("set") && args[2].equalsIgnoreCase("month")) {
+            // Complete month numbers
+            if (sender.hasPermission("loginbonus.admin")) {
+                String input = args[4].toLowerCase();
+                for (int i = 1; i <= 12; i++) {
+                    if (String.valueOf(i).startsWith(input)) {
+                        completions.add(String.valueOf(i));
+                    }
+                }
+            }
 
-        return completions;
+            return completions;
+        }
+        return null;
     }
 }
+

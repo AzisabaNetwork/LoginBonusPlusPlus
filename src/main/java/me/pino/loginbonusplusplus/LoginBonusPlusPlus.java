@@ -19,6 +19,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     private PlayerDataManager playerDataManager;
     private RewardManager rewardManager;
     private StreakManager streakManager;
+    private CalendarGUI calendarGUI;
+    private AdminCalendarGUI adminCalendarGUI;
+    private DayRewardEditGUI dayRewardEditGUI;
     private MessageManager messageManager;
 
     @Override
@@ -48,14 +51,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
         rewardManager.load();
 
         // ===== GUIs =====
-        CalendarGUI calendarGUI =
-                new CalendarGUI(this, playerDataManager, rewardManager);
-
-        AdminCalendarGUI adminCalendarGUI =
-                new AdminCalendarGUI(this, rewardManager);
-
-        DayRewardEditGUI dayRewardEditGUI =
-                new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
+        calendarGUI = new CalendarGUI(this, playerDataManager, rewardManager);
+        adminCalendarGUI = new AdminCalendarGUI(this, rewardManager);
+        dayRewardEditGUI = new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
 
         // ===== Commands =====
         LoginBonusCommand command =
@@ -106,5 +104,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
 
     public PlayerDataManager getPlayerDataManager() {
         return playerDataManager;
+    }
+
+    public CalendarGUI getCalendarGUI() {
+        return calendarGUI;
     }
 }

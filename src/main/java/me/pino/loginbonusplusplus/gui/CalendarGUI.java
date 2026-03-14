@@ -32,6 +32,29 @@ public class CalendarGUI {
         this.rewardManager = rewardManager;
     }
 
+    public void refreshCalendar(Player player) {
+        // Close current inventory and reopen calendar
+        player.closeInventory();
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            open(player);
+        }, 1L);
+    }
+
+    public void updateCalendar(Player player) {
+        // GUIを即時更新（インベントリを再構築）
+        if (player.getOpenInventory() != null && 
+            player.getOpenInventory().getTitle().equals("§6Login Bonus Calendar")) {
+            
+            // インベントリを更新して表示をリフレッシュ
+            player.updateInventory();
+            
+            // 少し遅延してから完全に再構築
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                refreshCalendar(player);
+            }, 2L);
+        }
+    }
+
     public void open(Player player) {
         // Create 54-slot inventory
         Inventory inventory = Bukkit.createInventory(null, 54, "§6Login Bonus Calendar");
@@ -87,15 +110,20 @@ public class CalendarGUI {
                 List<String> lore = buildRewardLore(day);
 
                 // Determine material based on claim status
+                int today = DateUtil.getCurrentDayOfMonth();
+                
                 if (data.hasClaimed(day)) {
                     material = Material.GREEN_STAINED_GLASS_PANE;
                     lore.add("§aClaimed");
-                } else if (day == unlockDay) {
+                } else if (day == unlockDay && day == today) {
                     material = Material.YELLOW_STAINED_GLASS_PANE;
                     lore.add("§7Click to claim");
-                } else if (day < unlockDay) {
+                } else if (day <= unlockDay && day < today) {
                     material = Material.RED_STAINED_GLASS_PANE;
                     lore.add("§cMissed");
+                } else if (day <= unlockDay) {
+                    material = Material.YELLOW_STAINED_GLASS_PANE;
+                    lore.add("§7Click to claim");
                 } else {
                     material = Material.GRAY_STAINED_GLASS_PANE;
                     lore.add("§8Locked");
@@ -313,6 +341,6 @@ public class CalendarGUI {
         // 1. 今日の日付である
         // 2. アンロック条件を満たしている
         // 3. まだ受取していない
-        return day == today && day == unlockDay && !data.hasClaimed(day);
+        return day <= unlockDay && day == today && !data.hasClaimed(day);
     }
 }
