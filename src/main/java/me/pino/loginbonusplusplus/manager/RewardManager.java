@@ -16,6 +16,8 @@ public class RewardManager {
     private final JavaPlugin plugin;
     private File file;
     private FileConfiguration config;
+    private File streakFile;
+    private FileConfiguration streakConfig;
 
     public RewardManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -30,6 +32,23 @@ public class RewardManager {
 
         config = YamlConfiguration.loadConfiguration(file);
         plugin.getLogger().info("Loaded rewards configuration");
+
+        // Load streak rewards from separate file
+        streakFile = new File(plugin.getDataFolder(), "streakrewards.yml");
+        if (!streakFile.exists()) {
+            try {
+                streakFile.createNewFile();
+                streakConfig = YamlConfiguration.loadConfiguration(streakFile);
+                // Save empty file
+                streakConfig.save(streakFile);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to create streakrewards.yml: " + e.getMessage());
+                streakConfig = new YamlConfiguration();
+            }
+        } else {
+            streakConfig = YamlConfiguration.loadConfiguration(streakFile);
+        }
+        plugin.getLogger().info("Loaded streak rewards configuration");
     }
 
     public List<String> getBaseRewards(int day) {
@@ -90,8 +109,8 @@ public class RewardManager {
         List<ItemStack> items = new ArrayList<>();
 
         String path = "streak." + streak;
-        if (config.contains(path)) {
-            List<String> base64Strings = config.getStringList(path);
+        if (streakConfig.contains(path)) {
+            List<String> base64Strings = streakConfig.getStringList(path);
             for (String base64String : base64Strings) {
                 try {
                     ItemStack item = ItemStackSerializer.itemFromBase64(base64String);
@@ -111,7 +130,7 @@ public class RewardManager {
         String path = "streak." + streak;
         
         if (rewards.isEmpty()) {
-            config.set(path, null);
+            streakConfig.set(path, null);
         } else {
             List<String> base64Strings = new ArrayList<>();
             for (ItemStack item : rewards) {
@@ -122,10 +141,14 @@ public class RewardManager {
                     plugin.getLogger().warning("Failed to serialize streak reward: " + e.getMessage());
                 }
             }
-            config.set(path, base64Strings);
+            streakConfig.set(path, base64Strings);
         }
         
-        saveConfig();
+        try {
+            streakConfig.save(streakFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save streak rewards: " + e.getMessage());
+        }
     }
 
     public List<ItemStack> getSpecialRewards(int day) {
@@ -203,5 +226,9 @@ public class RewardManager {
 
     public org.bukkit.configuration.file.FileConfiguration getConfig() {
         return config;
+    }
+
+    public org.bukkit.configuration.file.FileConfiguration getStreakConfig() {
+        return streakConfig;
     }
 }

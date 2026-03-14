@@ -5,6 +5,7 @@ import me.pino.loginbonusplusplus.manager.RewardManager;
 import me.pino.loginbonusplusplus.util.ItemStackSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -30,9 +31,9 @@ public class StreakRewardEditGUI implements Listener {
     private int[] getExistingStreaks() {
         List<Integer> streaks = new ArrayList<>();
         
-        // Check rewards.yml for existing streak rewards
-        if (rewardManager.getConfig().contains("streak")) {
-            for (String key : rewardManager.getConfig().getConfigurationSection("streak").getKeys(false)) {
+        // Check streakrewards.yml for existing streak rewards
+        if (rewardManager.getStreakConfig().contains("streak")) {
+            for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
                 try {
                     streaks.add(Integer.parseInt(key));
                 } catch (NumberFormatException ignored) {}
@@ -123,7 +124,7 @@ public class StreakRewardEditGUI implements Listener {
         editingStreak.put(player, streak);
         editingRewards.put(player, new ArrayList<>(rewardManager.getStreakRewards(streak)));
 
-        Inventory inv = Bukkit.createInventory(null, 54, "§6Edit " + streak + " Day Streak Rewards");
+        Inventory inv = Bukkit.createInventory(null, 54, "§cEdit Streak Rewards - " + streak + " Days");
 
         // Load current rewards
         List<ItemStack> rewards = editingRewards.get(player);
@@ -131,13 +132,13 @@ public class StreakRewardEditGUI implements Listener {
             inv.setItem(i, rewards.get(i));
         }
 
-        // Add control buttons
-        inv.setItem(45, createControlItem(Material.GREEN_STAINED_GLASS_PANE, "§aSave", "§7Save and return"));
-        inv.setItem(46, createControlItem(Material.YELLOW_STAINED_GLASS_PANE, "§eClear", "§7Clear all rewards"));
-        inv.setItem(47, createControlItem(Material.RED_STAINED_GLASS_PANE, "§cCancel", "§7Return without saving"));
-        inv.setItem(53, createControlItem(Material.BARRIER, "§cBack", "§7Return to streak list"));
+        // Add control buttons (matching DayRewardEditGUI design)
+        addControlButtons(inv);
 
         player.openInventory(inv);
+        
+        // Play open sound
+        playSound(player, "ui");
     }
 
     @EventHandler
@@ -146,21 +147,21 @@ public class StreakRewardEditGUI implements Listener {
         Player player = (Player) event.getWhoClicked();
 
         String title = event.getView().getTitle();
-        if (!title.equals("§6Streak Rewards Editor") && !title.startsWith("§6Edit ")) {
+        if (!title.equals("§6Streak Rewards Editor") && !title.startsWith("§cEdit Streak Rewards - ")) {
             return;
         }
 
-        event.setCancelled(true);
-        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
+        // 1) null check for clicked inventory
+        if (event.getClickedInventory() == null) {
             return;
+        }
+
+        // 2) Allow clicks on bottom inventory (player inventory) for item movement
+        if (!event.getClickedInventory().equals(event.getView().getTopInventory())) {
+            return; // Don't cancel - allow player inventory interaction
         }
 
         int slot = event.getSlot();
-        ItemStack clicked = event.getCurrentItem();
-
-        if (clicked == null || clicked.getType() == Material.AIR) {
-            return;
-        }
 
         // Handle main menu clicks
         if (title.equals("§6Streak Rewards Editor")) {
@@ -182,66 +183,72 @@ public class StreakRewardEditGUI implements Listener {
                 // Back to admin menu
                 plugin.getAdminCalendarGUI().open(player);
             }
+            event.setCancelled(true);
             return;
         }
 
-        // Handle streak editor clicks
-        if (title.startsWith("§6Edit ")) {
+        // Handle streak editor clicks (matching DayRewardEditGUI logic)
+        if (title.startsWith("§cEdit Streak Rewards - ")) {
             if (slot == 45) {
-                // Save
+                // Save button
+                event.setCancelled(true);
+                playSound(player, "success");
                 saveStreakRewards(player);
+                return;
             } else if (slot == 46) {
-                // Clear current streak rewards
+                // Clear button
+                event.setCancelled(true);
+                playSound(player, "ui");
                 editingRewards.get(player).clear();
                 openStreakEditor(player, editingStreak.get(player));
+                return;
             } else if (slot == 47) {
-                // Cancel
+                // Cancel button
+                event.setCancelled(true);
+                playSound(player, "cancel");
                 editingStreak.remove(player);
                 editingRewards.remove(player);
                 open(player);
+                return;
             } else if (slot == 53) {
-                // Back
+                // Back button
+                event.setCancelled(true);
+                playSound(player, "cancel");
                 editingStreak.remove(player);
                 editingRewards.remove(player);
                 open(player);
-            } else if (slot < 45) {
-                // Handle item slots (allow item movement)
-                handleItemEdit(player, event);
+                return;
+            } else if (slot >= 0 && slot <= 44) {
+                // Editable slots - allow item movement (don't cancel)
+                return;
+            } else if (slot >= 48 && slot <= 52) {
+                // Empty slots - cancel interaction
+                event.setCancelled(true);
+                return;
             }
-        }
-    }
 
-    private void handleItemEdit(Player player, InventoryClickEvent event) {
-        int slot = event.getSlot();
-        ItemStack cursor = event.getCursor();
-        ItemStack current = event.getCurrentItem();
-
-        if (cursor != null && cursor.getType() != Material.AIR) {
-            // Place item from cursor
-            if (current == null || current.getType() == Material.AIR) {
-                event.setCurrentItem(cursor.clone());
-                event.getWhoClicked().setItemOnCursor(null);
-                editingRewards.get(player).set(slot, cursor.clone());
-            }
-        } else if (current != null && current.getType() != Material.AIR) {
-            // Pick up item
-            event.getWhoClicked().setItemOnCursor(current.clone());
-            event.setCurrentItem(null);
-            editingRewards.get(player).set(slot, null);
+            // For all other slots, cancel the event
+            event.setCancelled(true);
         }
     }
 
     private void saveStreakRewards(Player player) {
         int streak = editingStreak.get(player);
-        List<ItemStack> rewards = editingRewards.get(player);
 
-        // Remove null items
-        rewards.removeIf(item -> item == null || item.getType() == Material.AIR);
+        // Get items from editable slots (0-44 only) - matching DayRewardEditGUI logic
+        List<ItemStack> items = new ArrayList<>();
+        for (int i = 0; i <= 44; i++) {
+            ItemStack item = player.getOpenInventory().getTopInventory().getItem(i);
+            if (item != null && item.getType() != Material.AIR) {
+                items.add(item);
+            }
+        }
 
-        // Save to rewards.yml
-        rewardManager.saveStreakRewards(streak, rewards);
+        // Save to streakrewards.yml
+        rewardManager.saveStreakRewards(streak, items);
 
-        player.sendMessage("§aSaved " + rewards.size() + " rewards for " + streak + " day streak!");
+        player.sendMessage("§a" + streak + "日ストリークの報酬を保存しました！");
+        playSound(player, "success");
         
         editingStreak.remove(player);
         editingRewards.remove(player);
@@ -250,7 +257,8 @@ public class StreakRewardEditGUI implements Listener {
 
     private void showCurrentRewards(Player player) {
         player.sendMessage("§6=== Current Streak Rewards ===");
-        for (int streak : STREAK_MILESTONES) {
+        int[] existingStreaks = getExistingStreaks();
+        for (int streak : existingStreaks) {
             List<ItemStack> rewards = rewardManager.getStreakRewards(streak);
             if (!rewards.isEmpty()) {
                 player.sendMessage("§e" + streak + " days: §f" + rewards.size() + " rewards");
@@ -281,5 +289,59 @@ public class StreakRewardEditGUI implements Listener {
         // This would require a chat listener implementation
         // For now, we'll use a simple approach with existing commands
         player.sendMessage("§cUse: /lb debug set-streak <number> to create a new streak milestone");
+    }
+
+    private void addControlButtons(Inventory inventory) {
+        // Slot 45: Save button
+        ItemStack saveButton = new ItemStack(Material.LIME_CONCRETE);
+        ItemMeta saveMeta = saveButton.getItemMeta();
+        if (saveMeta != null) {
+            saveMeta.setDisplayName("§a保存して戻る");
+            saveButton.setItemMeta(saveMeta);
+        }
+        inventory.setItem(45, saveButton);
+
+        // Slot 46: Clear button
+        ItemStack clearButton = new ItemStack(Material.YELLOW_CONCRETE);
+        ItemMeta clearMeta = clearButton.getItemMeta();
+        if (clearMeta != null) {
+            clearMeta.setDisplayName("§eクリア");
+            clearButton.setItemMeta(clearMeta);
+        }
+        inventory.setItem(46, clearButton);
+
+        // Slot 47: Cancel button
+        ItemStack cancelButton = new ItemStack(Material.RED_CONCRETE);
+        ItemMeta cancelMeta = cancelButton.getItemMeta();
+        if (cancelMeta != null) {
+            cancelMeta.setDisplayName("§c保存せず戻る");
+            cancelButton.setItemMeta(cancelMeta);
+        }
+        inventory.setItem(47, cancelButton);
+
+        // Slots 48-53: Leave empty
+    }
+
+    private void playSound(Player player, String soundType) {
+        try {
+            String soundName;
+            switch (soundType.toLowerCase()) {
+                case "success":
+                    soundName = "ENTITY_PLAYER_LEVELUP";
+                    break;
+                case "cancel":
+                    soundName = "UI_BUTTON_CLICK";
+                    break;
+                default:
+                    soundName = "UI_BUTTON_CLICK";
+                    break;
+            }
+            
+            Sound sound = Sound.valueOf(soundName);
+            player.playSound(player.getLocation(), sound, 1.0f, 1.0f);
+        } catch (IllegalArgumentException ignored) {
+            // Fallback to default sound
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        }
     }
 }

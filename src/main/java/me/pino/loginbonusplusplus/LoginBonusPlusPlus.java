@@ -2,6 +2,7 @@ package me.pino.loginbonusplusplus;
 
 import me.pino.loginbonusplusplus.command.LoginBonusCommand;
 import me.pino.loginbonusplusplus.gui.DayRewardEditGUI;
+import me.pino.loginbonusplusplus.gui.StreakRewardEditGUI;
 import me.pino.loginbonusplusplus.listener.LoginListener;
 import me.pino.loginbonusplusplus.manager.*;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -89,6 +90,11 @@ public class LoginBonusPlusPlus extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(
                 streakRewardEditGUI,
+                this
+        );
+
+        getServer().getPluginManager().registerEvents(
+                calendarGUI,
                 this
         );
 

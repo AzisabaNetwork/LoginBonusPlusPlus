@@ -9,6 +9,9 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
@@ -18,7 +21,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CalendarGUI {
+public class CalendarGUI implements Listener {
 
     private final JavaPlugin plugin;
     private final PlayerDataManager playerDataManager;
@@ -150,14 +153,14 @@ public class CalendarGUI {
             inventory.setItem(day - 1, item);
         }
 
-        // Add info display items (slots 45-49)
-        addInfoDisplayItems(inventory, monthly, streak);
+        // Add info display items (slots 45-48)
+        addInfoDisplayItems(inventory, monthly, streak, player);
 
         // Open inventory for player
         player.openInventory(inventory);
     }
 
-    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak) {
+    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak, Player player) {
         // Slot 45: Today's date
         ItemStack todayItem = new ItemStack(Material.CLOCK);
         ItemMeta todayMeta = todayItem.getItemMeta();
@@ -195,45 +198,9 @@ public class CalendarGUI {
         }
         inventory.setItem(47, streakItem);
 
-        // Slot 48: Next streak reward
-        ItemStack nextRewardItem = getNextStreakRewardDisplay(streak);
-        inventory.setItem(48, nextRewardItem);
-
-        // Slot 49: Days until next bonus
-        ItemStack daysUntilItem = new ItemStack(Material.PAPER);
-        ItemMeta daysUntilMeta = daysUntilItem.getItemMeta();
-        if (daysUntilMeta != null) {
-            daysUntilMeta.setDisplayName("§eNext Streak Bonus");
-            List<String> daysUntilLore = new ArrayList<>();
-            
-            // Get next streak reward info
-            int[] nextStreakInfo = getNextStreakReward(streak);
-            int nextStreak = nextStreakInfo[0];
-            int daysUntil = nextStreakInfo[1];
-            
-            if (nextStreak > 0) {
-                daysUntilLore.add("§7Next: " + nextStreak + " day streak");
-                daysUntilLore.add("§7In: " + daysUntil + " days");
-                
-                // Show reward items
-                List<ItemStack> nextRewards = rewardManager.getStreakRewards(nextStreak);
-                if (!nextRewards.isEmpty()) {
-                    daysUntilLore.add("§7Rewards:");
-                    for (ItemStack reward : nextRewards) {
-                        String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
-                            ? reward.getItemMeta().getDisplayName() 
-                            : reward.getType().name();
-                        daysUntilLore.add("§f- " + name + " §7x" + reward.getAmount());
-                    }
-                }
-            } else {
-                daysUntilLore.add("§7No more streak rewards");
-            }
-            
-            daysUntilMeta.setLore(daysUntilLore);
-            daysUntilItem.setItemMeta(daysUntilMeta);
-        }
-        inventory.setItem(49, daysUntilItem);
+        // Slot 48: Streak reward claim button
+        ItemStack streakClaimItem = createStreakClaimButton(streak, player);
+        inventory.setItem(48, streakClaimItem);
     }
 
     private Material getStreakMaterial(int streak) {
@@ -364,11 +331,11 @@ public class CalendarGUI {
     }
 
     private int[] getNextStreakReward(int currentStreak) {
-        // Get all streak rewards from config
+        // Get all streak rewards from streak config
         List<Integer> streaks = new ArrayList<>();
         
-        if (rewardManager.getConfig().contains("streak")) {
-            for (String key : rewardManager.getConfig().getConfigurationSection("streak").getKeys(false)) {
+        if (rewardManager.getStreakConfig().contains("streak")) {
+            for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
                 try {
                     int streak = Integer.parseInt(key);
                     if (streak > currentStreak) {
@@ -388,5 +355,194 @@ public class CalendarGUI {
         int daysUntil = nextStreak - currentStreak;
         
         return new int[]{nextStreak, daysUntil};
+    }
+
+    @EventHandler
+    public void onClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        Player player = (Player) event.getWhoClicked();
+
+        String title = event.getView().getTitle();
+        if (!title.equals("§6Login Bonus Calendar")) {
+            return;
+        }
+
+        if (event.getClickedInventory() == null || !event.getClickedInventory().equals(event.getView().getTopInventory())) {
+            return;
+        }
+
+        int slot = event.getSlot();
+        
+        // Handle streak reward claim (slot 48)
+        if (slot == 48) {
+            event.setCancelled(true);
+            claimStreakRewards(player);
+        }
+    }
+
+    private void claimStreakRewards(Player player) {
+        PlayerData data = playerDataManager.getPlayer(player.getUniqueId());
+        int currentStreak = data.getStreak();
+        
+        // Get all available streak rewards
+        List<Integer> availableStreaks = new ArrayList<>();
+        if (rewardManager.getStreakConfig().contains("streak")) {
+            for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
+                try {
+                    int streak = Integer.parseInt(key);
+                    if (streak <= currentStreak) {
+                        availableStreaks.add(streak);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        if (availableStreaks.isEmpty()) {
+            player.sendMessage("§cNo streak rewards available to claim!");
+            return;
+        }
+        
+        // Check for unclaimed rewards using claimedDays (streak rewards use negative numbers)
+        List<ItemStack> allRewards = new ArrayList<>();
+        List<Integer> claimedStreaks = new ArrayList<>();
+        
+        for (int streak : availableStreaks) {
+            // Use negative streak number to distinguish from day rewards in claimedDays
+            if (!data.hasClaimed(-streak)) {
+                List<ItemStack> streakRewards = rewardManager.getStreakRewards(streak);
+                if (!streakRewards.isEmpty()) {
+                    allRewards.addAll(streakRewards);
+                    claimedStreaks.add(streak);
+                }
+            }
+        }
+        
+        if (allRewards.isEmpty()) {
+            player.sendMessage("§eAll available streak rewards have been claimed!");
+            return;
+        }
+        
+        // Give rewards
+        for (ItemStack reward : allRewards) {
+            player.getInventory().addItem(reward);
+        }
+        
+        // Mark streaks as claimed using negative numbers
+        for (int streak : claimedStreaks) {
+            data.addClaimedDay(-streak);
+        }
+        
+        playerDataManager.savePlayer(data);
+        
+        player.sendMessage("§aClaimed " + allRewards.size() + " streak rewards!");
+        player.sendMessage("§eStreak rewards: " + claimedStreaks.stream().map(String::valueOf).reduce((a, b) -> a + ", " + b).orElse(""));
+        
+        // Refresh GUI
+        open(player);
+    }
+
+    private ItemStack createStreakClaimButton(int streak, Player player) {
+        // Get all available streak rewards
+        List<Integer> availableStreaks = new ArrayList<>();
+        List<ItemStack> allRewards = new ArrayList<>();
+        
+        if (rewardManager.getStreakConfig().contains("streak")) {
+            for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
+                try {
+                    int streakNum = Integer.parseInt(key);
+                    if (streakNum <= streak) {
+                        availableStreaks.add(streakNum);
+                        List<ItemStack> streakRewards = rewardManager.getStreakRewards(streakNum);
+                        allRewards.addAll(streakRewards);
+                    }
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        // Check for unclaimed rewards
+        List<Integer> unclaimedStreaks = new ArrayList<>();
+        PlayerData data = playerDataManager.getPlayer(player.getUniqueId());
+        
+        for (int streakNum : availableStreaks) {
+            if (!data.hasClaimed(-streakNum)) {
+                unclaimedStreaks.add(streakNum);
+            }
+        }
+        
+        ItemStack item;
+        ItemMeta meta;
+        
+        if (unclaimedStreaks.isEmpty()) {
+            // No rewards to claim
+            item = new ItemStack(Material.PAPER);
+            meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName("§c§l次の連続ログイン報酬");
+                List<String> lore = new ArrayList<>();
+                
+                // Show next streak reward info
+                int[] nextStreakInfo = getNextStreakReward(streak);
+                int nextStreak = nextStreakInfo[0];
+                
+                if (nextStreak > 0) {
+                    int daysUntil = nextStreak - streak;
+                    lore.add("§7次の報酬まで: §e" + daysUntil + "日");
+                    
+                    List<ItemStack> nextRewards = rewardManager.getStreakRewards(nextStreak);
+                    if (!nextRewards.isEmpty()) {
+                        lore.add("§7次の報酬:");
+                        for (ItemStack reward : nextRewards) {
+                            String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
+                                ? reward.getItemMeta().getDisplayName() 
+                                : reward.getType().name();
+                            lore.add("§f- " + name + " §7x" + reward.getAmount());
+                        }
+                    }
+                } else {
+                    lore.add("§7報酬はありません");
+                }
+                
+                meta.setLore(lore);
+            }
+        } else {
+            // Has rewards to claim
+            item = new ItemStack(Material.GOLD_BLOCK);
+            meta = item.getItemMeta();
+            if (meta != null) {
+                meta.setDisplayName("§3§lログインストリーク報酬");
+                List<String> lore = new ArrayList<>();
+                lore.add("§a§l受け取れる報酬があります！");
+                
+                // Show next streak info
+                int[] nextStreakInfo = getNextStreakReward(streak);
+                int nextStreak = nextStreakInfo[0];
+                
+                if (nextStreak > 0 && !unclaimedStreaks.contains(nextStreak)) {
+                    int daysUntil = nextStreak - streak;
+                    lore.add("§7次の報酬まで: §e" + daysUntil + "日");
+                }
+                
+                // Show all unclaimed rewards
+                lore.add("§7受け取れる報酬:");
+                for (int streakNum : unclaimedStreaks) {
+                    List<ItemStack> streakRewards = rewardManager.getStreakRewards(streakNum);
+                    for (ItemStack reward : streakRewards) {
+                        String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
+                            ? reward.getItemMeta().getDisplayName() 
+                            : reward.getType().name();
+                        lore.add("§f- " + name + " §7x" + reward.getAmount());
+                    }
+                }
+                
+                meta.setLore(lore);
+                meta.addEnchant(org.bukkit.enchantments.Enchantment.DURABILITY, 1, true);
+            }
+        }
+        
+        if (meta != null) {
+            item.setItemMeta(meta);
+        }
+        
+        return item;
     }
 }
