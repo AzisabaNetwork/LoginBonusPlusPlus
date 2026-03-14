@@ -364,6 +364,16 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
+        } else if (args.length == 5 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("set") && args[2].equalsIgnoreCase("day")) {
+            // Complete day numbers
+            if (sender.hasPermission("loginbonus.admin")) {
+                String input = args[4].toLowerCase();
+                for (int i = 1; i <= 31; i++) {
+                    if (String.valueOf(i).startsWith(input)) {
+                        completions.add(String.valueOf(i));
+                    }
+                }
+            }
         } else if (args.length == 5 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("set") && args[2].equalsIgnoreCase("month")) {
             // Complete month numbers
             if (sender.hasPermission("loginbonus.admin")) {
@@ -374,10 +384,9 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
-
-            return completions;
         }
-        return null;
+
+        return completions;
     }
 }
 
