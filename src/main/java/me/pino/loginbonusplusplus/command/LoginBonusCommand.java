@@ -329,14 +329,17 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§cUsage:");
         player.sendMessage("§7/lb §f- Open login bonus calendar");
         player.sendMessage("§7/lb admin §f- Open admin calendar");
-        player.sendMessage("§7/lb admin reset-month §f- Reset monthly data for all players");
-        player.sendMessage("§7/lb reload §f- Reload configuration");
-        player.sendMessage("§7/lb config §f- Show configuration info");
-        player.sendMessage("§7/lb check <player> §f- Check player login data");
-        player.sendMessage("§7/lb debug add <player> <amount> §f- Add login days");
-        player.sendMessage("§7/lb debug reset <player> §f- Reset player data");
-        player.sendMessage("§7/lb debug set day <player> <day> §f- Set unlock day");
-        player.sendMessage("§7/lb debug set month <player> <month> §f- Set month (testing)");
+        
+        if (player.hasPermission("loginbonus.admin")) {
+            player.sendMessage("§7/lb admin reset-month §f- Reset monthly data for all players");
+            player.sendMessage("§7/lb reload §f- Reload configuration");
+            player.sendMessage("§7/lb config §f- Show configuration info");
+            player.sendMessage("§7/lb check <player> §f- Check player login data");
+            player.sendMessage("§7/lb debug add <player> <amount> §f- Add login days");
+            player.sendMessage("§7/lb debug reset <player> §f- Reset player data");
+            player.sendMessage("§7/lb debug set day <player> <day> §f- Set unlock day");
+            player.sendMessage("§7/lb debug set month <player> <month> §f- Set month (testing)");
+        }
     }
 
     private boolean handleResetMonthCommand(Player player, String[] args) {
@@ -401,11 +404,13 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("check")) {
-            // Complete player names for check
-            String input = args[1].toLowerCase();
-            for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-                if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
-                    completions.add(onlinePlayer.getName());
+            // Complete player names for check - admin only
+            if (sender.hasPermission("loginbonus.admin")) {
+                String input = args[1].toLowerCase();
+                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                    if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                        completions.add(onlinePlayer.getName());
+                    }
                 }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
