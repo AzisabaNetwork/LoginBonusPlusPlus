@@ -91,7 +91,7 @@ public class CalendarGUI implements Listener {
                     } else if (day == unlockDay) {
                         lore.add("§7Click to claim");
                     } else if (day < unlockDay) {
-                        lore.add("§cMissed");
+                        lore.add("§7Click to claim");
                     } else {
                         lore.add("§8Locked");
                     }
@@ -122,8 +122,8 @@ public class CalendarGUI implements Listener {
                     material = Material.YELLOW_STAINED_GLASS_PANE;
                     lore.add("§7Click to claim");
                 } else if (day <= unlockDay && day < today) {
-                    material = Material.RED_STAINED_GLASS_PANE;
-                    lore.add("§cMissed");
+                    material = Material.YELLOW_STAINED_GLASS_PANE;
+                    lore.add("§7Click to claim");
                 } else if (day <= unlockDay) {
                     material = Material.YELLOW_STAINED_GLASS_PANE;
                     lore.add("§7Click to claim");
@@ -201,6 +201,10 @@ public class CalendarGUI implements Listener {
         // Slot 48: Streak reward claim button
         ItemStack streakClaimItem = createStreakClaimButton(streak, player);
         inventory.setItem(48, streakClaimItem);
+
+        // Slot 49: Streak rewards list
+        ItemStack streakList = createStreakRewardsList();
+        inventory.setItem(49, streakList);
     }
 
     private Material getStreakMaterial(int streak) {
@@ -543,6 +547,48 @@ public class CalendarGUI implements Listener {
             item.setItemMeta(meta);
         }
         
+        return item;
+    }
+
+    private ItemStack createStreakRewardsList() {
+        ItemStack item = new ItemStack(Material.BOOK);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§6§lストリーク報酬一覧");
+            List<String> lore = new ArrayList<>();
+            lore.add("§7全ストリーク報酬:");
+            
+            // Get all streak rewards from config
+            if (rewardManager.getStreakConfig().contains("streak")) {
+                List<Integer> streaks = new ArrayList<>();
+                for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
+                    try {
+                        streaks.add(Integer.parseInt(key));
+                    } catch (NumberFormatException ignored) {}
+                }
+                
+                // Sort streaks
+                streaks.sort(Integer::compareTo);
+                
+                for (int streak : streaks) {
+                    List<ItemStack> rewards = rewardManager.getStreakRewards(streak);
+                    if (!rewards.isEmpty()) {
+                        lore.add("§e" + streak + "日:");
+                        for (ItemStack reward : rewards) {
+                            String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
+                                ? reward.getItemMeta().getDisplayName() 
+                                : reward.getType().name();
+                            lore.add("  §f- " + name + " §7x" + reward.getAmount());
+                        }
+                    }
+                }
+            } else {
+                lore.add("§c報酬が設定されていません");
+            }
+            
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+        }
         return item;
     }
 }

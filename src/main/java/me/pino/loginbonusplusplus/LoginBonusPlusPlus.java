@@ -5,6 +5,7 @@ import me.pino.loginbonusplusplus.gui.DayRewardEditGUI;
 import me.pino.loginbonusplusplus.gui.StreakRewardEditGUI;
 import me.pino.loginbonusplusplus.listener.LoginListener;
 import me.pino.loginbonusplusplus.manager.*;
+import me.pino.loginbonusplusplus.util.ItemStackSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
 import me.pino.loginbonusplusplus.gui.CalendarGUI;
 import me.pino.loginbonusplusplus.gui.AdminCalendarGUI;
@@ -29,6 +30,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     @Override
     public void onEnable() {
         getLogger().info("LoginBonusPlusPlus has been enabled!");
+
+        // Initialize secure serializer
+        ItemStackSerializer.setPlugin(this);
 
         // データフォルダ作成
         if (!getDataFolder().exists()) {
