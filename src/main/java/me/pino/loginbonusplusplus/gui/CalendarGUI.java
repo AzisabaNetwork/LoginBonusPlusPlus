@@ -153,14 +153,37 @@ public class CalendarGUI implements Listener {
             inventory.setItem(day - 1, item);
         }
 
-        // Add info display items (slots 45-48)
-        addInfoDisplayItems(inventory, monthly, streak, player);
+        // Fill empty day slots with gray glass to prevent conflicts
+        // Only fill slots that would be day slots (up to slot 30 for 31-day months)
+        for (int i = monthLength; i < 31; i++) {
+            ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+            ItemMeta fillerMeta = filler.getItemMeta();
+            if (fillerMeta != null) {
+                fillerMeta.setDisplayName("§8");
+                filler.setItemMeta(fillerMeta);
+            }
+            inventory.setItem(i, filler);
+        }
+        
+        // Fill remaining slots (31-44) with darker glass to clearly separate from days
+        for (int i = 31; i < 45; i++) {
+            ItemStack filler = new ItemStack(Material.AIR);
+            ItemMeta fillerMeta = filler.getItemMeta();
+            if (fillerMeta != null) {
+                fillerMeta.setDisplayName("§8");
+                filler.setItemMeta(fillerMeta);
+            }
+            inventory.setItem(i, filler);
+        }
+
+        // Add info display items (slots 45-49)
+        addInfoDisplayItems(inventory, monthly, streak, player, monthLength);
 
         // Open inventory for player
         player.openInventory(inventory);
     }
 
-    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak, Player player) {
+    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak, Player player, int monthLength) {
         // Slot 45: Today's date
         ItemStack todayItem = new ItemStack(Material.CLOCK);
         ItemMeta todayMeta = todayItem.getItemMeta();
@@ -168,6 +191,7 @@ public class CalendarGUI implements Listener {
             todayMeta.setDisplayName("§eToday");
             List<String> todayLore = new ArrayList<>();
             todayLore.add("§7Date: " + DateUtil.getCurrentMonth() + "/" + DateUtil.getCurrentDayOfMonth());
+            todayLore.add("§7Month: " + monthLength + " days");
             todayMeta.setLore(todayLore);
             todayItem.setItemMeta(todayMeta);
         }
@@ -198,13 +222,34 @@ public class CalendarGUI implements Listener {
         }
         inventory.setItem(47, streakItem);
 
-        // Slot 48: Streak reward claim button
-        ItemStack streakClaimItem = createStreakClaimButton(streak, player);
-        inventory.setItem(48, streakClaimItem);
+        // Slot 48-49: Empty spacing with glass panes
+        ItemStack spacingItem = new ItemStack(Material.AIR);
+        ItemMeta spacingMeta = spacingItem.getItemMeta();
+        if (spacingMeta != null) {
+            spacingMeta.setDisplayName("§8");
+            spacingItem.setItemMeta(spacingMeta);
+        }
+        inventory.setItem(48, spacingItem);
+        inventory.setItem(49, spacingItem);
 
-        // Slot 49: Streak rewards list
+        // Slot 50: Streak reward claim button
+        ItemStack streakClaimItem = createStreakClaimButton(streak, player);
+        inventory.setItem(50, streakClaimItem);
+
+        // Slot 51: Streak rewards list
         ItemStack streakList = createStreakRewardsList();
-        inventory.setItem(49, streakList);
+        inventory.setItem(51, streakList);
+        
+        // Slot 52: Empty spacing
+        inventory.setItem(52, spacingItem);
+        
+        // デバッグ：アイテムが正しく設定されたか確認
+        plugin.getLogger().info("Debug: Setting streak list item at slot 51");
+        if (streakList != null && streakList.getItemMeta() != null) {
+            plugin.getLogger().info("Debug: Streak list item created: " + streakList.getItemMeta().getDisplayName());
+        } else {
+            plugin.getLogger().warning("Debug: Failed to create streak list item!");
+        }
     }
 
     private Material getStreakMaterial(int streak) {
@@ -377,8 +422,8 @@ public class CalendarGUI implements Listener {
 
         int slot = event.getSlot();
         
-        // Handle streak reward claim (slot 48)
-        if (slot == 48) {
+        // Handle streak reward claim (slot 50)
+        if (slot == 50) {
             event.setCancelled(true);
             claimStreakRewards(player);
         }
@@ -558,32 +603,59 @@ public class CalendarGUI implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add("§7全ストリーク報酬:");
             
+            // デバッグ情報
+            plugin.getLogger().info("Debug: Checking streak rewards config...");
+            
             // Get all streak rewards from config
-            if (rewardManager.getStreakConfig().contains("streak")) {
-                List<Integer> streaks = new ArrayList<>();
-                for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
-                    try {
-                        streaks.add(Integer.parseInt(key));
-                    } catch (NumberFormatException ignored) {}
-                }
+            if (rewardManager.getStreakConfig() != null) {
+                plugin.getLogger().info("Debug: Streak config is not null");
                 
-                // Sort streaks
-                streaks.sort(Integer::compareTo);
-                
-                for (int streak : streaks) {
-                    List<ItemStack> rewards = rewardManager.getStreakRewards(streak);
-                    if (!rewards.isEmpty()) {
-                        lore.add("§e" + streak + "日:");
-                        for (ItemStack reward : rewards) {
-                            String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
-                                ? reward.getItemMeta().getDisplayName() 
-                                : reward.getType().name();
-                            lore.add("  §f- " + name + " §7x" + reward.getAmount());
+                if (rewardManager.getStreakConfig().contains("streak")) {
+                    plugin.getLogger().info("Debug: Found 'streak' section");
+                    
+                    List<Integer> streaks = new ArrayList<>();
+                    for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
+                        try {
+                            streaks.add(Integer.parseInt(key));
+                            plugin.getLogger().info("Debug: Found streak key: " + key);
+                        } catch (NumberFormatException ignored) {
+                            plugin.getLogger().warning("Debug: Invalid streak key: " + key);
                         }
                     }
+                    
+                    // Sort streaks
+                    streaks.sort(Integer::compareTo);
+                    plugin.getLogger().info("Debug: Total streaks found: " + streaks.size());
+                    
+                    if (streaks.isEmpty()) {
+                        lore.add("§c報酬が設定されていません");
+                    } else {
+                        for (int streak : streaks) {
+                            List<ItemStack> rewards = rewardManager.getStreakRewards(streak);
+                            plugin.getLogger().info("Debug: Streak " + streak + " has " + rewards.size() + " rewards");
+                            
+                            if (!rewards.isEmpty()) {
+                                lore.add("§e" + streak + "日:");
+                                for (ItemStack reward : rewards) {
+                                    String name = reward.hasItemMeta() && reward.getItemMeta().hasDisplayName() 
+                                        ? reward.getItemMeta().getDisplayName() 
+                                        : reward.getType().name();
+                                    lore.add("  §f- " + name + " §7x" + reward.getAmount());
+                                }
+                            } else {
+                                lore.add("§e" + streak + "日: §c報酬なし");
+                            }
+                        }
+                    }
+                } else {
+                    plugin.getLogger().warning("Debug: No 'streak' section found in config");
+                    lore.add("§cストリーク報酬セクションが見つかりません");
+                    lore.add("§7/lb admin から報酬を設定してください");
                 }
             } else {
-                lore.add("§c報酬が設定されていません");
+                plugin.getLogger().warning("Debug: Streak config is null");
+                lore.add("§cストリーク報酬設定が読み込めません");
+                lore.add("§7/lb reload を実行してください");
             }
             
             meta.setLore(lore);

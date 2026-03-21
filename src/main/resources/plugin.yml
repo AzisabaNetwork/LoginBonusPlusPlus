@@ -1,6 +1,6 @@
 name: LoginBonusPlusPlus
 main: me.pino.loginbonusplusplus.LoginBonusPlusPlus
-version: ${version}
+version: 1.1.0
 api-version: 1.16
 author: pino223
 
