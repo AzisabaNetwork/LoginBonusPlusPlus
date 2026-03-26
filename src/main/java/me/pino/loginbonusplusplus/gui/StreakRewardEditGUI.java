@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -26,6 +27,7 @@ public class StreakRewardEditGUI implements Listener {
     private final RewardManager rewardManager;
     private final Map<Player, Integer> editingStreak = new HashMap<>();
     private final Map<Player, List<ItemStack>> editingRewards = new HashMap<>();
+    private final Map<Player, Boolean> waitingForChatInput = new HashMap<>();
 
     // Get all existing streak rewards from config
     private int[] getExistingStreaks() {
@@ -285,10 +287,8 @@ public class StreakRewardEditGUI implements Listener {
         player.sendMessage("§ePlease enter the streak number in chat (e.g., 15, 25, 40)");
         player.sendMessage("§7Type 'cancel' to cancel");
         
-        // Store player in waiting list for chat input
-        // This would require a chat listener implementation
-        // For now, we'll use a simple approach with existing commands
-        player.sendMessage("§cUse: /lb debug set-streak <number> to create a new streak milestone");
+        // Mark player as waiting for chat input
+        waitingForChatInput.put(player, true);
     }
 
     private void addControlButtons(Inventory inventory) {
@@ -342,6 +342,49 @@ public class StreakRewardEditGUI implements Listener {
         } catch (IllegalArgumentException ignored) {
             // Fallback to default sound
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        
+        // Check if player is waiting for input
+        if (waitingForChatInput.containsKey(player) && waitingForChatInput.get(player)) {
+            event.setCancelled(true);
+            
+            String message = event.getMessage().trim();
+            
+            // Handle cancel
+            if (message.equalsIgnoreCase("cancel")) {
+                waitingForChatInput.remove(player);
+                player.sendMessage("§cCancelled streak creation.");
+                return;
+            }
+            
+            // Try to parse streak number
+            try {
+                int streakNumber = Integer.parseInt(message);
+                
+                if (streakNumber < 1) {
+                    player.sendMessage("§cStreak number must be positive!");
+                    return;
+                }
+                
+                // Create new streak
+                editingStreak.put(player, streakNumber);
+                editingRewards.put(player, new ArrayList<>());
+                waitingForChatInput.remove(player);
+                
+                player.sendMessage("§aCreated new streak milestone: " + streakNumber + " days");
+                player.sendMessage("§7Now add items to the inventory and click save.");
+                
+                // Open editing GUI for this streak
+                openStreakEditor(player, streakNumber);
+                
+            } catch (NumberFormatException e) {
+                player.sendMessage("§cInvalid number! Please enter a valid streak number (e.g., 15, 25, 40)");
+            }
         }
     }
 }
