@@ -373,11 +373,18 @@ public class StreakRewardEditGUI implements Listener {
                 
                 // Create new streak
                 editingStreak.put(player, streakNumber);
-                editingRewards.put(player, new ArrayList<>());
+                
+                // Load existing rewards for this streak (if any)
+                List<ItemStack> existingRewards = rewardManager.getStreakRewards(streakNumber);
+                editingRewards.put(player, new ArrayList<>(existingRewards));
                 waitingForChatInput.remove(player);
                 
                 player.sendMessage("§aCreated new streak milestone: " + streakNumber + " days");
-                player.sendMessage("§7Now add items to the inventory and click save.");
+                if (existingRewards.isEmpty()) {
+                    player.sendMessage("§7Now add items to the inventory and click save.");
+                } else {
+                    player.sendMessage("§7Loaded " + existingRewards.size() + " existing rewards. You can modify them.");
+                }
                 
                 // Open editing GUI for this streak
                 openStreakEditor(player, streakNumber);
