@@ -19,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class CalendarGUI implements Listener {
@@ -472,8 +473,13 @@ public class CalendarGUI implements Listener {
         }
         
         // Give rewards
-        for (ItemStack reward : allRewards) {
-            player.getInventory().addItem(reward);
+        // ===== 空きチェック =====
+        HashMap<Integer, ItemStack> leftover =
+                player.getInventory().addItem(allRewards.toArray(new ItemStack[0]));
+
+        if (!leftover.isEmpty()) {
+            player.sendMessage("§cインベントリが満杯です！空きを作ってから再度受け取ってください。");
+            return;
         }
         
         // Mark streaks as claimed using negative numbers

@@ -81,10 +81,6 @@ public class CalendarClickListener implements Listener {
         allRewards.addAll(rewardManager.getBaseRewardItems(day));
         allRewards.addAll(rewardManager.getSpecialRewards(day));
 
-        int streak = data.getStreak();
-        List<ItemStack> streakItems = rewardManager.getStreakRewards(streak);
-        allRewards.addAll(streakItems);
-
         // ===== 先に仮投入して空きチェック =====
         HashMap<Integer, ItemStack> leftover =
                 player.getInventory().addItem(
@@ -99,11 +95,6 @@ public class CalendarClickListener implements Listener {
 
             player.sendMessage(messageManager.get("inventory-full"));
             return;
-        }
-
-        // ===== 付与成功 =====
-        if (!streakItems.isEmpty()) {
-            player.sendMessage(messageManager.get("streak-bonus"));
         }
 
         data.addClaimedDay(day);
