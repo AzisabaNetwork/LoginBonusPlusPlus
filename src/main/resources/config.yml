@@ -63,3 +63,7 @@ sounds:
     sound: UI_BUTTON_CLICK
     volume: 0.8
     pitch: 0.8
+
+freeze-item:
+  name: "ログイン補填券"
+  material: "PAPER"

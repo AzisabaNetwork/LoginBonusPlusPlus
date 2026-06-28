@@ -5,6 +5,7 @@ import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -18,6 +19,8 @@ public class RewardManager {
     private FileConfiguration config;
     private File streakFile;
     private FileConfiguration streakConfig;
+    private File claimableIconFile;
+    private FileConfiguration claimableIconConfig;
 
     public RewardManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -48,7 +51,41 @@ public class RewardManager {
         } else {
             streakConfig = YamlConfiguration.loadConfiguration(streakFile);
         }
-        plugin.getLogger().info("Loaded streak rewards configuration");
+        claimableIconFile = new File(plugin.getDataFolder(), "claimableicons.yml");
+        if (!claimableIconFile.exists()) {
+            try { claimableIconFile.createNewFile(); } catch (Exception ignored) {}
+        }
+        claimableIconConfig = YamlConfiguration.loadConfiguration(claimableIconFile);
+    }
+
+    public ItemStack getClaimableIcon(int day) {
+        String path = "day." + day;
+        if (!claimableIconConfig.contains(path)) return null;
+        try {
+            String base64 = claimableIconConfig.getString(path);
+            if (base64 != null && base64.startsWith("rO0AB")) {
+                return ItemStackSerializer.itemFromBase64(base64);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public void saveClaimableIcon(int day, ItemStack icon) {
+        try {
+            claimableIconConfig.set("day." + day, ItemStackSerializer.itemToBase64(icon));
+            claimableIconConfig.save(claimableIconFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save claimable icon for day " + day + ": " + e.getMessage());
+        }
+    }
+
+    public void clearClaimableIcon(int day) {
+        claimableIconConfig.set("day." + day, null);
+        try {
+            claimableIconConfig.save(claimableIconFile);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to clear claimable icon for day " + day + ": " + e.getMessage());
+        }
     }
 
     public List<String> getBaseRewards(int day) {
@@ -95,7 +132,6 @@ public class RewardManager {
 
         try {
             config.save(file);
-            plugin.getLogger().info("Saved rewards for day " + day);
         } catch (Exception e) {
             plugin.getLogger().severe("Failed to save rewards for day " + day + ": " + e.getMessage());
         }

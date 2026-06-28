@@ -9,6 +9,10 @@ import java.io.File;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 
 public class PlayerDataManager {
 
@@ -61,45 +65,64 @@ public class PlayerDataManager {
         return data;
     }
 
+    public void saveAll() {
+        for (PlayerData data : cache.values()) {
+            // config オブジェクトに書き込む（まだファイルには保存しない）
+            String path = data.getUuid().toString();
+            config.set(path + ".claimed", new ArrayList<>(data.getClaimedDays()));
+            config.set(path + ".streak", data.getStreak());
+            if (data.getLastLoginDate() != null) {
+                config.set(path + ".lastLogin", data.getLastLoginDate().toString());
+            } else {
+                config.set(path + ".lastLogin", null);
+            }
+            config.set(path + ".lastLoginMonth", data.getLastLoginMonth());
+            config.set(path + ".total", data.getTotalLoginDays());
+            config.set(path + ".monthly", data.getMonthlyLoginCount());
+        }
+
+        // 一括で1回だけ保存（アトミック書き込み）
+        saveConfigAtomically();
+        plugin.getLogger().info("Saved " + cache.size() + " player data entries");
+    }
+
     public void savePlayer(PlayerData data) {
-
         String path = data.getUuid().toString();
-
-        // claimedDays
         config.set(path + ".claimed", new ArrayList<>(data.getClaimedDays()));
-
-        // streak
         config.set(path + ".streak", data.getStreak());
-
-        // lastLoginDate (LocalDate → String)
         if (data.getLastLoginDate() != null) {
             config.set(path + ".lastLogin", data.getLastLoginDate().toString());
         } else {
             config.set(path + ".lastLogin", null);
         }
-
-        // lastLoginMonth
         config.set(path + ".lastLoginMonth", data.getLastLoginMonth());
-
-        // totalLoginDays
         config.set(path + ".total", data.getTotalLoginDays());
-
-        // monthlyLoginCount
         config.set(path + ".monthly", data.getMonthlyLoginCount());
+        config.set(path + ".freezeTickets", data.getFreezeTickets());
 
-        try {
-            config.save(file);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Failed to save player data for "
-                    + path + ": " + e.getMessage());
-        }
+        saveConfigAtomically();
     }
 
-    public void saveAll() {
-        for (PlayerData data : cache.values()) {
-            savePlayer(data);
+    // 一時ファイル経由でアトミックに保存する
+    private synchronized void saveConfigAtomically() {
+        File tempFile = new File(file.getParentFile(), "players.yml.tmp");
+        File backupFile = new File(file.getParentFile(), "players.yml.bak");
+        try {
+            config.save(tempFile);
+            if (file.exists()) {
+                Files.copy(file.toPath(), backupFile.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+            Files.move(tempFile.toPath(), file.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save player data: " + e.getMessage());
+            tempFile.delete();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Failed to save player data (config): " + e.getMessage());
+            tempFile.delete();
         }
-        plugin.getLogger().info("Saved " + cache.size() + " player data entries");
     }
 
     private PlayerData loadPlayerData(UUID uuid) {
@@ -111,6 +134,8 @@ public class PlayerDataManager {
         }
 
         PlayerData data = new PlayerData(uuid);
+
+        data.setFreezeTickets(config.getInt(path + ".freezeTickets", 0));
 
         // claimedDays
         List<Integer> claimedDays = config.getIntegerList(path + ".claimed");

@@ -387,7 +387,7 @@ public class StreakRewardEditGUI implements Listener {
                 }
                 
                 // Open editing GUI for this streak
-                openStreakEditor(player, streakNumber);
+                Bukkit.getScheduler().runTask(plugin, () -> openStreakEditor(player, streakNumber));
                 
             } catch (NumberFormatException e) {
                 player.sendMessage("§cInvalid number! Please enter a valid streak number (e.g., 15, 25, 40)");

@@ -20,6 +20,8 @@ public class PlayerData {
 
     private int monthlyLoginCount;
 
+    private int freezeTickets = 0;
+
     private int lastLoginMonth;
 
     public PlayerData(UUID uuid) {
@@ -98,5 +100,18 @@ public class PlayerData {
 
     public void setLastLoginMonth(int lastLoginMonth) {
         this.lastLoginMonth = lastLoginMonth;
+    }
+
+    public int getFreezeTickets() { return freezeTickets; }
+    public void setFreezeTickets(int freezeTickets) {
+        this.freezeTickets = Math.max(0, Math.min(64, freezeTickets));
+    }
+    public void addFreezeTicket(int amount) {
+        setFreezeTickets(this.freezeTickets + amount);
+    }
+    public boolean consumeFreezeTicket() {
+        if (freezeTickets <= 0) return false;
+        freezeTickets--;
+        return true;
     }
 }

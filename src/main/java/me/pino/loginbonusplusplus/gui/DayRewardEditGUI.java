@@ -26,14 +26,6 @@ public class DayRewardEditGUI implements Listener {
     private final MessageManager messageManager;
     private final JavaPlugin plugin;
 
-    public DayRewardEditGUI(RewardManager rewardManager, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager) {
-        this.rewardManager = rewardManager;
-        this.adminCalendarGUI = adminCalendarGUI;
-        this.messageManager = messageManager;
-        // Plugin reference will be set by AdminCalendarGUI
-        this.plugin = null;
-    }
-
     public DayRewardEditGUI(RewardManager rewardManager, AdminCalendarGUI adminCalendarGUI, MessageManager messageManager, JavaPlugin plugin) {
         this.rewardManager = rewardManager;
         this.adminCalendarGUI = adminCalendarGUI;

@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import java.util.Map;
+
 public class CalendarGUI implements Listener {
 
     private final JavaPlugin plugin;
@@ -74,58 +76,63 @@ public class CalendarGUI implements Listener {
 
         // Loop through days 1 to end of month
         for (int day = 1; day <= monthLength; day++) {
-            // Try to get custom icon from rewards.yml
             ItemStack dayIcon = rewardManager.getDayIcon(day);
             ItemStack item;
 
-            if (dayIcon != null) {
-                // Use custom icon
+            boolean isClaimable = canClaimToday(day, unlockDay, data);
+            boolean isClaimed   = data.hasClaimed(day);
+            ItemStack claimableIcon = rewardManager.getClaimableIcon(day);
+
+            if (claimableIcon != null) {
+                // claimableアイコンが設定されている場合
+                item = claimableIcon.clone();
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName("§eDay " + day);
+                    List<String> lore = buildRewardLore(day);
+                    if (isClaimed) {
+                        lore.add("§aClaimed");
+                        // glowなし
+                    } else if (isClaimable) {
+                        lore.add("§7Click to claim");
+                        // 受け取り可能：glowあり
+                        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                    } else {
+                        lore.add("§8Locked");
+                        // 未来の日：glowなし
+                    }
+                    meta.setLore(lore);
+                    item.setItemMeta(meta);
+                }
+            } else if (dayIcon != null) {
+                // 通常アイコン（従来通り）
                 item = dayIcon.clone();
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
-                    // Add reward lore first
                     List<String> lore = buildRewardLore(day);
-                    
-                    // Add claim status
-                    if (data.hasClaimed(day)) {
+                    if (isClaimed) {
                         lore.add("§aClaimed");
-                    } else if (day == unlockDay) {
+                    } else if (isClaimable) {
                         lore.add("§7Click to claim");
-                    } else if (day < unlockDay) {
-                        lore.add("§7Click to claim");
+                        meta.addEnchant(Enchantment.DURABILITY, 1, true);
+                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     } else {
                         lore.add("§8Locked");
                     }
-
-                    // Apply enchantment glow for today's claimable reward
-                    if (canClaimToday(day, unlockDay, data)) {
-                        meta.addEnchant(Enchantment.DURABILITY, 1, true);
-                        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-                    }
-
                     meta.setLore(lore);
                     item.setItemMeta(meta);
                 }
             } else {
-                // Use traditional colored glass
+                // ガラス（従来通り・変更なし）
                 Material material;
-                
-                // Start with reward lore
                 List<String> lore = buildRewardLore(day);
-
-                // Determine material based on claim status
                 int today = DateUtil.getCurrentDayOfMonth();
-                
-                if (data.hasClaimed(day)) {
+
+                if (isClaimed) {
                     material = Material.GREEN_STAINED_GLASS_PANE;
                     lore.add("§aClaimed");
-                } else if (day == unlockDay && day == today) {
-                    material = Material.YELLOW_STAINED_GLASS_PANE;
-                    lore.add("§7Click to claim");
-                } else if (day <= unlockDay && day < today) {
-                    material = Material.YELLOW_STAINED_GLASS_PANE;
-                    lore.add("§7Click to claim");
-                } else if (day <= unlockDay) {
+                } else if (isClaimable) {
                     material = Material.YELLOW_STAINED_GLASS_PANE;
                     lore.add("§7Click to claim");
                 } else {
@@ -133,24 +140,19 @@ public class CalendarGUI implements Listener {
                     lore.add("§8Locked");
                 }
 
-                // Create item with display name and lore
                 item = new ItemStack(material);
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
                     meta.setDisplayName("§eDay " + day);
                     meta.setLore(lore);
-                    
-                    // Apply enchantment glow for today's claimable reward
-                    if (canClaimToday(day, unlockDay, data)) {
+                    if (isClaimable) {
                         meta.addEnchant(Enchantment.DURABILITY, 1, true);
                         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                     }
-                    
                     item.setItemMeta(meta);
                 }
             }
 
-            // Set item in inventory (day-1 because inventory starts at 0)
             inventory.setItem(day - 1, item);
         }
 
@@ -178,13 +180,13 @@ public class CalendarGUI implements Listener {
         }
 
         // Add info display items (slots 45-49)
-        addInfoDisplayItems(inventory, monthly, streak, player, monthLength);
+        addInfoDisplayItems(inventory, monthly, streak, player, monthLength, data);
 
         // Open inventory for player
         player.openInventory(inventory);
     }
 
-    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak, Player player, int monthLength) {
+    private void addInfoDisplayItems(Inventory inventory, int monthly, int streak, Player player, int monthLength, PlayerData data) {
         // Slot 45: Today's date
         ItemStack todayItem = new ItemStack(Material.CLOCK);
         ItemMeta todayMeta = todayItem.getItemMeta();
@@ -243,14 +245,46 @@ public class CalendarGUI implements Listener {
         
         // Slot 52: Empty spacing
         inventory.setItem(52, spacingItem);
-        
+
+        inventory.setItem(53, createFreezeTicketDisplay(data));
+
         // デバッグ：アイテムが正しく設定されたか確認
-        plugin.getLogger().info("Debug: Setting streak list item at slot 51");
         if (streakList != null && streakList.getItemMeta() != null) {
             plugin.getLogger().info("Debug: Streak list item created: " + streakList.getItemMeta().getDisplayName());
         } else {
             plugin.getLogger().warning("Debug: Failed to create streak list item!");
         }
+    }
+
+    private ItemStack createFreezeTicketDisplay(PlayerData data) {
+        String name = plugin.getConfig().getString("freeze-item.name", "ログイン補填券");
+        int count = data.getFreezeTickets();
+
+        Material mat;
+        try {
+            mat = Material.valueOf(plugin.getConfig().getString("freeze-item.material", "PAPER"));
+        } catch (IllegalArgumentException e) {
+            mat = Material.PAPER;
+        }
+
+        ItemStack item = new ItemStack(mat, Math.max(1, count));
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(name);
+            List<String> lore = new ArrayList<>();
+            lore.add("§7所持数: §e" + count + "§7/64枚");
+            lore.add("");
+            lore.add("§a左クリック §7: インベントリから1枚預ける");
+            lore.add("§c右クリック §7: 1枚引き出す");
+            lore.add("");
+            lore.add("§71日だけ空いた場合のみ自動消費されます");
+            lore.add("§c2日以上空いた場合は消費されません");
+            lore.add("§a§l");
+            lore.add("§a§lこれは実験的な要素です");
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     private Material getStreakMaterial(int streak) {
@@ -371,13 +405,8 @@ public class CalendarGUI implements Listener {
     }
 
     private boolean canClaimToday(int day, int unlockDay, PlayerData data) {
-        int today = DateUtil.getCurrentDayOfMonth();
-        
-        // 条件：
-        // 1. 今日の日付である
-        // 2. アンロック条件を満たしている
-        // 3. まだ受取していない
-        return day <= unlockDay && day == today && !data.hasClaimed(day);
+        // day <= unlockDay かつ未受け取りであれば受け取り可能
+        return day <= unlockDay && !data.hasClaimed(day);
     }
 
     private int[] getNextStreakReward(int currentStreak) {
@@ -609,16 +638,9 @@ public class CalendarGUI implements Listener {
             List<String> lore = new ArrayList<>();
             lore.add("§7全ストリーク報酬:");
             
-            // デバッグ情報
-            plugin.getLogger().info("Debug: Checking streak rewards config...");
-            
             // Get all streak rewards from config
             if (rewardManager.getStreakConfig() != null) {
-                plugin.getLogger().info("Debug: Streak config is not null");
-                
                 if (rewardManager.getStreakConfig().contains("streak")) {
-                    plugin.getLogger().info("Debug: Found 'streak' section");
-                    
                     List<Integer> streaks = new ArrayList<>();
                     for (String key : rewardManager.getStreakConfig().getConfigurationSection("streak").getKeys(false)) {
                         try {
@@ -631,7 +653,6 @@ public class CalendarGUI implements Listener {
                     
                     // Sort streaks
                     streaks.sort(Integer::compareTo);
-                    plugin.getLogger().info("Debug: Total streaks found: " + streaks.size());
                     
                     if (streaks.isEmpty()) {
                         lore.add("§c報酬が設定されていません");

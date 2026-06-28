@@ -191,7 +191,7 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
             Player target = Bukkit.getPlayerExact(args[3]);
             if (target == null) {
-                player.sendMessage("§cPlayer not found: " + args[3]);
+                player.sendMessage("§cPlayer not found: " + args[4]);
                 return true;
             }
 

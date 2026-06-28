@@ -1,14 +1,11 @@
 package me.pino.loginbonusplusplus;
 
 import me.pino.loginbonusplusplus.command.LoginBonusCommand;
-import me.pino.loginbonusplusplus.gui.DayRewardEditGUI;
-import me.pino.loginbonusplusplus.gui.StreakRewardEditGUI;
+import me.pino.loginbonusplusplus.gui.*;
 import me.pino.loginbonusplusplus.listener.LoginListener;
 import me.pino.loginbonusplusplus.manager.*;
 import me.pino.loginbonusplusplus.util.ItemStackSerializer;
 import org.bukkit.plugin.java.JavaPlugin;
-import me.pino.loginbonusplusplus.gui.CalendarGUI;
-import me.pino.loginbonusplusplus.gui.AdminCalendarGUI;
 import me.pino.loginbonusplusplus.listener.CalendarClickListener;
 import me.pino.loginbonusplusplus.listener.AdminCalendarClickListener;
 import me.pino.loginbonusplusplus.manager.CalendarManager;
@@ -26,81 +23,58 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     private DayRewardEditGUI dayRewardEditGUI;
     private StreakRewardEditGUI streakRewardEditGUI;
     private MessageManager messageManager;
+    private ClaimableIconEditGUI claimableIconEditGUI;
 
     @Override
     public void onEnable() {
         getLogger().info("LoginBonusPlusPlus has been enabled!");
 
-        // Initialize secure serializer
         ItemStackSerializer.setPlugin(this);
 
-        // データフォルダ作成
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
 
-        // リソース保存（初回のみ）
         saveResource("config.yml", false);
         saveResource("rewards.yml", false);
-        saveResource("players.yml", false);
         saveResource("messages.yml", false);
 
         // ===== Managers =====
         playerDataManager = new PlayerDataManager(this);
-        rewardManager = new RewardManager(this);
-        streakManager = new StreakManager();
+        rewardManager     = new RewardManager(this);
+        streakManager     = new StreakManager();
         CalendarManager calendarManager = new CalendarManager();
-        messageManager = new MessageManager(this);
-        //MessageManager messageManager = new MessageManager(this);
+        messageManager    = new MessageManager(this);
 
         playerDataManager.load();
         rewardManager.load();
 
-        // ===== GUIs =====
-        calendarGUI = new CalendarGUI(this, playerDataManager, rewardManager);
-        adminCalendarGUI = new AdminCalendarGUI(this, rewardManager);
-        dayRewardEditGUI = new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
-        streakRewardEditGUI = new StreakRewardEditGUI(this, rewardManager);
+        // ===== GUIs（順序重要） =====
+        claimableIconEditGUI = new ClaimableIconEditGUI(this, rewardManager);
+        adminCalendarGUI     = new AdminCalendarGUI(this, rewardManager, claimableIconEditGUI);
+        dayRewardEditGUI     = new DayRewardEditGUI(rewardManager, adminCalendarGUI, messageManager, this);
+        streakRewardEditGUI  = new StreakRewardEditGUI(this, rewardManager);
+        calendarGUI          = new CalendarGUI(this, playerDataManager, rewardManager);
+
+        adminCalendarGUI.setStreakRewardEditGUI(streakRewardEditGUI);
 
         // ===== Commands =====
-        LoginBonusCommand command =
-                new LoginBonusCommand(calendarGUI, adminCalendarGUI, this);
-
+        LoginBonusCommand command = new LoginBonusCommand(calendarGUI, adminCalendarGUI, this);
         getCommand("lb").setExecutor(command);
         getCommand("lb").setTabCompleter(command);
 
-
-
-        // ===== Listeners =====
+        // ===== Listeners（重複登録なし） =====
         getServer().getPluginManager().registerEvents(
-                new LoginListener(this, playerDataManager, streakManager, calendarManager, messageManager),
-                this
-        );
-
+                new LoginListener(this, playerDataManager, streakManager, calendarManager, messageManager), this);
         getServer().getPluginManager().registerEvents(
-                new CalendarClickListener(this, playerDataManager, rewardManager, messageManager),
-                this
-        );
-
+                new CalendarClickListener(this, playerDataManager, rewardManager, messageManager), this);
         getServer().getPluginManager().registerEvents(
-                new AdminCalendarClickListener(rewardManager, dayRewardEditGUI, streakRewardEditGUI, adminCalendarGUI, messageManager),
-                this
-        );
-
-        getServer().getPluginManager().registerEvents(
-                dayRewardEditGUI,
-                this
-        );
-
-        getServer().getPluginManager().registerEvents(
-                streakRewardEditGUI,
-                this
-        );
-
-        getServer().getPluginManager().registerEvents(
-                calendarGUI,
-                this
-        );
+                new AdminCalendarClickListener(rewardManager, dayRewardEditGUI, streakRewardEditGUI, adminCalendarGUI, messageManager), this);
+        getServer().getPluginManager().registerEvents(dayRewardEditGUI,        this);
+        getServer().getPluginManager().registerEvents(streakRewardEditGUI,     this);
+        getServer().getPluginManager().registerEvents(calendarGUI,             this);
+        getServer().getPluginManager().registerEvents(claimableIconEditGUI,    this);
+        getServer().getPluginManager().registerEvents(adminCalendarGUI,        this);
 
         getLogger().info("LoginBonusPlusPlus fully initialized!");
     }
@@ -114,9 +88,11 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     }
 
     public void reloadPlugin() {
+        playerDataManager.saveAll();
         reloadConfig();
         rewardManager.reload();
         messageManager.reload();
+        playerDataManager.load();
     }
 
     public PlayerDataManager getPlayerDataManager() {
@@ -134,4 +110,9 @@ public class LoginBonusPlusPlus extends JavaPlugin {
     public StreakRewardEditGUI getStreakRewardEditGUI() {
         return streakRewardEditGUI;
     }
+
+    public ClaimableIconEditGUI getClaimableIconEditGUI() {
+        return claimableIconEditGUI;
+    }
+
 }
