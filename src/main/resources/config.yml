@@ -65,5 +65,5 @@ sounds:
     pitch: 0.8
 
 freeze-item:
-  name: "ログイン補填券"
+  name: "&6&lログイン補填券"
   material: "PAPER"

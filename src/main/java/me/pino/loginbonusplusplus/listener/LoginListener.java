@@ -7,6 +7,7 @@ import me.pino.loginbonusplusplus.manager.StreakManager;
 import me.pino.loginbonusplusplus.model.PlayerData;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -27,7 +28,7 @@ public class LoginListener implements Listener {
     private final MessageManager messageManager;
 
     // 補填券の識別名（config.ymlで変更可能）
-    private static final String FREEZE_ITEM_NAME = "§b§lログイン補填券";
+    private static final String FREEZE_ITEM_NAME = "§6§lログイン補填券";
 
     public LoginListener(JavaPlugin plugin,
                          PlayerDataManager playerDataManager,
@@ -117,7 +118,8 @@ public class LoginListener implements Listener {
 
     // 補填券を持っているか確認
     private boolean hasFreezeItem(Player player) {
-        String name = plugin.getConfig().getString("freeze-item.name", FREEZE_ITEM_NAME);
+        String name = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("freeze-item.name", "&6&lログイン補填券"));
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType() == Material.AIR) continue;
             if (!item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) continue;
@@ -128,7 +130,8 @@ public class LoginListener implements Listener {
 
     // 補填券を1枚消費
     private void consumeFreezeItem(Player player) {
-        String name = plugin.getConfig().getString("freeze-item.name", FREEZE_ITEM_NAME);
+        String name = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("freeze-item.name", "&6&lログイン補填券"));
         ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];

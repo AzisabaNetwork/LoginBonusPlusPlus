@@ -25,6 +25,8 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
     private final AdminCalendarGUI adminCalendarGUI;
     private final LoginBonusPlusPlus plugin;
     private final PlayerDataManager playerDataManager;
+    private final java.util.Map<UUID, Long> pendingResetConfirmations = new java.util.HashMap<>();
+    private static final long CONFIRM_TIMEOUT_MS = 30_000L;
 
     public LoginBonusCommand(CalendarGUI calendarGUI, AdminCalendarGUI adminCalendarGUI, LoginBonusPlusPlus plugin) {
         this.calendarGUI = calendarGUI;
@@ -48,12 +50,22 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 player.sendMessage("§cYou don't have permission to use this command.");
                 return true;
             }
-            
+
             // Handle /lb admin reset-month
             if (args.length >= 2 && args[1].equalsIgnoreCase("reset-month")) {
                 return handleResetMonthCommand(player, args);
             }
-            
+
+            // Handle /lb admin resetdata <player>
+            if (args.length >= 3 && args[1].equalsIgnoreCase("resetdata")) {
+                return handleResetDataCommand(player, args);
+            }
+
+            // Handle /lb admin resetall
+            if (args.length >= 2 && args[1].equalsIgnoreCase("resetall")) {
+                return handleResetAllCommand(player, args);
+            }
+
             adminCalendarGUI.open(player);
             return true;
         }
@@ -126,12 +138,12 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             data.setTotalLoginDays(data.getTotalLoginDays() + amount);
             data.setMonthlyLoginCount(data.getMonthlyLoginCount() + amount);
             data.setStreak(data.getStreak() + amount);
-            
+
             // lastLoginDateを設定してmissed表示を防止
             if (data.getLastLoginDate() == null) {
                 data.setLastLoginDate(LocalDate.now());
             }
-            
+
             playerDataManager.savePlayer(data);
 
             player.sendMessage("§aAdded " + amount + " login days to " + target.getName());
@@ -260,7 +272,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            // 日本語のクリック可能メッセージを送信
             net.md_5.bungee.api.chat.TextComponent base = new net.md_5.bungee.api.chat.TextComponent("§e未受取の報酬があります！ ");
 
             net.md_5.bungee.api.chat.TextComponent click = new net.md_5.bungee.api.chat.TextComponent("§a§n[ここをクリックしてカレンダーを開く]");
@@ -329,9 +340,11 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§cUsage:");
         player.sendMessage("§7/lb §f- Open login bonus calendar");
         player.sendMessage("§7/lb admin §f- Open admin calendar");
-        
+        player.sendMessage("§7/lb admin resetdata <player> §f- Reset player login data (要確認)");
+
         if (player.hasPermission("loginbonus.admin")) {
             player.sendMessage("§7/lb admin reset-month §f- Reset monthly data for all players");
+            player.sendMessage("§7/lb admin resetall §f- 全プレイヤーのデータを完全リセット (要確認)");
             player.sendMessage("§7/lb reload §f- Reload configuration");
             player.sendMessage("§7/lb config §f- Show configuration info");
             player.sendMessage("§7/lb check <player> §f- Check player login data");
@@ -346,7 +359,7 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
         // 全プレイヤーの月データをリセット
         int currentMonth = LocalDate.now().getMonthValue();
         int resetCount = 0;
-        
+
         // オンラインプレイヤーを処理
         for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             PlayerData data = playerDataManager.getPlayer(onlinePlayer.getUniqueId());
@@ -355,16 +368,118 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
             data.setLastLoginMonth(currentMonth);
             playerDataManager.savePlayer(data);
             resetCount++;
-            
+
             onlinePlayer.sendMessage("§eYour monthly login data has been reset by admin.");
         }
-        
-        // オフラインプレイヤーも処理（PlayerDataManagerにgetAllPlayersメソッドが必要な場合）
-        // この部分はPlayerDataManagerの実装に依存します
-        
+
         player.sendMessage("§aMonthly reset completed for " + resetCount + " online players!");
         plugin.getLogger().info("Admin " + player.getName() + " performed monthly reset for " + resetCount + " players");
-        
+
+        return true;
+    }
+
+    private boolean handleResetDataCommand(Player player, String[] args) {
+        // /lb admin resetdata confirm <player>
+        if (args.length >= 4 && args[2].equalsIgnoreCase("confirm")) {
+            Player target = Bukkit.getPlayerExact(args[3]);
+            if (target == null) {
+                player.sendMessage("§cPlayer not found: " + args[3]);
+                return true;
+            }
+
+            Long requestedAt = pendingResetConfirmations.get(player.getUniqueId());
+            if (requestedAt == null) {
+                player.sendMessage("§c確認待ちのリセット要求がありません。先に /lb admin resetdata " + target.getName() + " を実行してください。");
+                return true;
+            }
+            if (System.currentTimeMillis() - requestedAt > CONFIRM_TIMEOUT_MS) {
+                pendingResetConfirmations.remove(player.getUniqueId());
+                player.sendMessage("§c確認がタイムアウトしました。もう一度 /lb admin resetdata " + target.getName() + " を実行してください。");
+                return true;
+            }
+            playerDataManager.backupToTimestampedFile();
+            // ===== 実際のリセット処理 =====
+            PlayerData data = playerDataManager.getPlayer(target.getUniqueId());
+            data.getClaimedDays().clear();
+            data.setStreak(0);
+            data.setTotalLoginDays(0);
+            data.setMonthlyLoginCount(0);
+            data.setLastLoginDate(null);
+            data.setLastLoginMonth(0);
+            data.setFreezeTickets(0);
+
+            playerDataManager.savePlayer(data);
+            pendingResetConfirmations.remove(player.getUniqueId());
+
+            player.sendMessage("§a" + target.getName() + " のログイン情報をリセットしました。");
+            target.sendMessage("§cあなたのログイン情報は管理者によってリセットされました。");
+            plugin.getLogger().info("Admin " + player.getName() + " reset login data for " + target.getName());
+            return true;
+        }
+
+        // /lb admin resetdata <player>（1回目：確認要求）
+        Player target = Bukkit.getPlayerExact(args[2]);
+        if (target == null) {
+            player.sendMessage("§cPlayer not found: " + args[2]);
+            return true;
+        }
+
+        pendingResetConfirmations.put(player.getUniqueId(), System.currentTimeMillis());
+
+        player.sendMessage("§c§l警告: " + target.getName() + " のログイン情報を完全にリセットします。");
+        player.sendMessage("§7この操作は取り消せません。(streak・月間ログイン・受取済み日・補填券が全て消去されます)");
+
+        TextComponent confirmMsg = new TextComponent("§a§l[クリックで確定]");
+        confirmMsg.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                "/lb admin resetdata confirm " + target.getName()));
+        player.spigot().sendMessage(confirmMsg);
+
+        player.sendMessage("§730秒以内に確定してください。");
+        return true;
+    }
+
+    private boolean handleResetAllCommand(Player player, String[] args) {
+        // /lb admin resetall confirm
+        if (args.length >= 3 && args[2].equalsIgnoreCase("confirm")) {
+            Long requestedAt = pendingResetConfirmations.get(player.getUniqueId());
+            if (requestedAt == null) {
+                player.sendMessage("§c確認待ちの全員リセット要求がありません。先に /lb admin resetall を実行してください。");
+                return true;
+            }
+            if (System.currentTimeMillis() - requestedAt > CONFIRM_TIMEOUT_MS) {
+                pendingResetConfirmations.remove(player.getUniqueId());
+                player.sendMessage("§c確認がタイムアウトしました。もう一度 /lb admin resetall を実行してください。");
+                return true;
+            }
+
+            // ===== 全員リセット実行 =====
+            playerDataManager.resetAllPlayersData();
+            pendingResetConfirmations.remove(player.getUniqueId());
+
+            player.sendMessage("§a全プレイヤーのログインデータをリセットしました。");
+            plugin.getLogger().warning("Admin " + player.getName() + " performed a FULL RESET of ALL player data.");
+
+            // オンラインプレイヤー全員に通知
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.sendMessage("§cあなたのログインボーナスデータは管理者によって全てリセットされました。");
+            }
+            return true;
+        }
+
+        // /lb admin resetall（1回目：確認要求）
+        pendingResetConfirmations.put(player.getUniqueId(), System.currentTimeMillis());
+
+        player.sendMessage("§4§l⚠ 警告 ⚠");
+        player.sendMessage("§c§l全プレイヤーのログインデータを完全にリセットします。");
+        player.sendMessage("§7オンライン・オフライン問わず、streak・月間ログイン・受取済み日・補填券が§c§l全消去§r§7されます。");
+        player.sendMessage("§7この操作は取り消せません。実行前に自動でバックアップが作成されます。");
+
+        TextComponent confirmMsg = new TextComponent("§a§l[クリックで確定]");
+        confirmMsg.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                "/lb admin resetall confirm"));
+        player.spigot().sendMessage(confirmMsg);
+
+        player.sendMessage("§730秒以内に確定してください。");
         return true;
     }
 
@@ -374,7 +489,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
 
         // Only complete first argument
         if (args.length == 1) {
-            // Check if sender has admin permission
             if (sender instanceof Player && ((Player) sender).hasPermission("loginbonus.admin")) {
                 String input = args[0].toLowerCase();
                 if ("admin".startsWith(input)) {
@@ -390,21 +504,24 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                     completions.add("debug");
                 }
             }
-            // check command is available for everyone
             String input = args[0].toLowerCase();
             if ("check".startsWith(input)) {
                 completions.add("check");
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("admin")) {
-            // Complete admin subcommands
             if (sender.hasPermission("loginbonus.admin")) {
                 String input = args[1].toLowerCase();
                 if ("reset-month".startsWith(input)) {
                     completions.add("reset-month");
                 }
+                if ("resetdata".startsWith(input)) {
+                    completions.add("resetdata");
+                }
+                if ("resetall".startsWith(input)) {
+                    completions.add("resetall");
+                }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("check")) {
-            // Complete player names for check - admin only
             if (sender.hasPermission("loginbonus.admin")) {
                 String input = args[1].toLowerCase();
                 for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
@@ -414,7 +531,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
-            // Complete second argument for debug
             if (sender.hasPermission("loginbonus.admin")) {
                 String input = args[1].toLowerCase();
                 if ("add".startsWith(input)) {
@@ -431,7 +547,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("debug")) {
-            // Complete third argument for debug commands
             if (sender.hasPermission("loginbonus.admin")) {
                 if (args[1].equalsIgnoreCase("set")) {
                     String input = args[2].toLowerCase();
@@ -444,7 +559,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                         completions.add("sendmessage");
                     }
                 } else {
-                    // Complete player names for add and reset
                     String input = args[2].toLowerCase();
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
@@ -454,10 +568,8 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 4 && args[0].equalsIgnoreCase("debug")) {
-            // Complete fourth argument for debug commands
             if (sender.hasPermission("loginbonus.admin")) {
                 if (args[1].equalsIgnoreCase("add")) {
-                    // Complete player names for add
                     String input = args[3].toLowerCase();
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
@@ -465,7 +577,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                         }
                     }
                 } else if (args[1].equalsIgnoreCase("set") && (args[2].equalsIgnoreCase("day") || args[2].equalsIgnoreCase("month"))) {
-                    // Complete player names for set day/month
                     String input = args[3].toLowerCase();
                     for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                         if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
@@ -475,7 +586,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 5 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("set") && args[2].equalsIgnoreCase("day")) {
-            // Complete day numbers
             if (sender.hasPermission("loginbonus.admin")) {
                 String input = args[4].toLowerCase();
                 for (int i = 1; i <= 31; i++) {
@@ -485,7 +595,6 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 5 && args[0].equalsIgnoreCase("debug") && args[1].equalsIgnoreCase("set") && args[2].equalsIgnoreCase("month")) {
-            // Complete month numbers
             if (sender.hasPermission("loginbonus.admin")) {
                 String input = args[4].toLowerCase();
                 for (int i = 1; i <= 12; i++) {
@@ -494,9 +603,17 @@ public class LoginBonusCommand implements CommandExecutor, TabCompleter {
                     }
                 }
             }
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("admin") && args[1].equalsIgnoreCase("resetdata")) {
+            if (sender.hasPermission("loginbonus.admin")) {
+                String input = args[2].toLowerCase();
+                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                    if (onlinePlayer.getName().toLowerCase().startsWith(input)) {
+                        completions.add(onlinePlayer.getName());
+                    }
+                }
+            }
         }
 
         return completions;
     }
 }
-

@@ -7,6 +7,7 @@ import me.pino.loginbonusplusplus.manager.PlayerDataManager;
 import me.pino.loginbonusplusplus.manager.RewardManager;
 import me.pino.loginbonusplusplus.model.PlayerData;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -123,7 +124,8 @@ public class CalendarClickListener implements Listener {
 
     private void handleFreezeTicket(Player player, boolean rightClick) {
         PlayerData data = playerDataManager.getPlayer(player.getUniqueId());
-        String name = plugin.getConfig().getString("freeze-item.name", "ログイン補填券");
+        String name = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("freeze-item.name", "&6&lログイン補填券"));
 
         Material mat;
         try {
@@ -145,6 +147,7 @@ public class CalendarClickListener implements Listener {
                 List<String> lore = new ArrayList<>();
                 lore.add("§71日だけ途切れた場合に自動消費されます");
                 lore.add("§c2日以上空いた場合は消費されません");
+                lore.add("§c§l取引禁止");
                 lore.add("§a§l");
                 lore.add("§a§lこれは実験的な要素です");
                 meta.setLore(lore);

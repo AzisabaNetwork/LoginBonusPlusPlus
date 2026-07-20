@@ -79,6 +79,7 @@ public class PlayerDataManager {
             config.set(path + ".lastLoginMonth", data.getLastLoginMonth());
             config.set(path + ".total", data.getTotalLoginDays());
             config.set(path + ".monthly", data.getMonthlyLoginCount());
+            config.set(path + ".freezeTickets", data.getFreezeTickets());
         }
 
         // 一括で1回だけ保存（アトミック書き込み）
@@ -101,6 +102,30 @@ public class PlayerDataManager {
         config.set(path + ".freezeTickets", data.getFreezeTickets());
 
         saveConfigAtomically();
+    }
+
+    /**
+     * 全プレイヤーのログインデータを初期化する。
+     *
+     * キャッシュ上の PlayerData は同じインスタンスを初期化することで、
+     * オンラインプレイヤーが保持している参照もリセット後の状態に揃える。
+     */
+    public void resetAllPlayersData() {
+        backupToTimestampedFile();
+
+        int currentMonth = LocalDate.now().getMonthValue();
+        for (PlayerData data : cache.values()) {
+            data.clearClaimedDays();
+            data.setStreak(0);
+            data.setLastLoginDate(null);
+            data.setLastLoginMonth(currentMonth);
+            data.setTotalLoginDays(0);
+            data.setMonthlyLoginCount(0);
+            data.setFreezeTickets(0);
+        }
+
+        saveAll();
+        plugin.getLogger().warning("Reset all player data entries: " + cache.size());
     }
 
     // 一時ファイル経由でアトミックに保存する
@@ -169,5 +194,23 @@ public class PlayerDataManager {
         data.setMonthlyLoginCount(config.getInt(path + ".monthly", 0));
 
         return data;
+    }
+    public void backupToTimestampedFile() {
+        File backupDir = new File(plugin.getDataFolder(), "backups");
+        if (!backupDir.exists()) {
+            backupDir.mkdirs();
+        }
+
+        String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(new java.util.Date());
+        File backupFile = new File(backupDir, "players_" + timestamp + ".txt");
+
+        try {
+            if (file.exists()) {
+                Files.copy(file.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                plugin.getLogger().info("players.yml のバックアップを作成しました: " + backupFile.getName());
+            }
+        } catch (IOException e) {
+            plugin.getLogger().severe("バックアップの作成に失敗しました: " + e.getMessage());
+        }
     }
 }

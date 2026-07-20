@@ -257,7 +257,8 @@ public class CalendarGUI implements Listener {
     }
 
     private ItemStack createFreezeTicketDisplay(PlayerData data) {
-        String name = plugin.getConfig().getString("freeze-item.name", "ログイン補填券");
+        String name = ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("freeze-item.name", "&6&lログイン補填券"));
         int count = data.getFreezeTickets();
 
         Material mat;
@@ -279,6 +280,7 @@ public class CalendarGUI implements Listener {
             lore.add("");
             lore.add("§71日だけ空いた場合のみ自動消費されます");
             lore.add("§c2日以上空いた場合は消費されません");
+            lore.add("§c§l取引禁止");
             lore.add("§a§l");
             lore.add("§a§lこれは実験的な要素です");
             meta.setLore(lore);
